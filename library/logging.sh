@@ -83,6 +83,9 @@ function LOG() {
     # display the messages with colored text if 'raw_texts' is NOT 'true'.
     [[ "${raw_texts,,}" != "true" ]] && final_text="${color_code}${final_text}\033[0m"
 
+    # append the calling stacks at the end of error/fatal logs.
+    [[ "${level,,}" =~ ^(error|fatal)$ ]] && final_text+="\n$(util::calling_stacks 2)"
+
     # do not print a newline '\n' at the end of messages if nonewline is NOT 'true'.
     [[ "${nonewline,,}" != "true" ]] && final_text+="\n"
 
