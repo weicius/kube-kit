@@ -2,6 +2,71 @@
 # vim: nu:noai:ts=4
 # shellcheck shell=bash disable=SC1090,SC2034,SC2206,SC2207
 
+# note: this function returns an array's defination.
+# e.g. ret_str="$(util::parse_ini /path/to/ini/file)"
+# ret_str's content (including the single quotes) is
+# '([10.10.10.11]="r00tnode1" [10.10.10.22]="r00tnode2" [10.10.10.33]="r00tnode3" )'
+# you can use "${ret_str}" to re-declare your new array via the "eval" command:
+# eval "declare -A new_array=${ret_str}"
+# now, you can use the new_array as normal :)
+function util::parse_ini() {
+    local ini_file="${1}"
+
+    if [[ ! -f "${ini_file}" ]]; then
+        LOG error "The ini file '${ini_file}' doesn't exist!"
+        return 1
+    fi
+
+    local -a ips
+    for line in $(grep -vE '(^#|^;|^$)' "${ini_file}" | grep '^\[.*\]'); do
+        group_ips=($(ipv4::ip_string_to_ip_array "${line:1:-1}"))
+        for ip in "${group_ips[@]}"; do
+            if util::element_in_array "${ip}" "${ips[@]}"; then
+                LOG error "The ip address '${ip}' is duplicated!"
+                return 2
+            elif ! util::can_ping "${ip}"; then
+                LOG error "Can't ping this ip address: '${ip}'!"
+                return 3
+            fi
+            ips+=(${ip})
+        done
+    done
+
+    local -A ret
+    while read -r line; do
+        # exclude lines that are blank or comments.
+        if [[ "${line}" =~ (^#|^;|^$) ]]; then
+            continue
+        elif [[ "${line}" =~ ^\[.*\]$ ]]; then
+            group_ips=($(ipv4::ip_string_to_ip_array "${line:1:-1}"))
+        else
+            for ip in "${group_ips[@]}"; do
+                if [[ "${ret[${ip}]}" =~ ${line} ]]; then
+                    LOG error "The value '${line}' for '${ip}' is duplicated!" \
+                              "tips: if a value is the prefix of other values" \
+                              "(e.g. two values '/dev/sdb' and '/dev/sdb1')," \
+                              "you should put the shortest one (i.e. /dev/sdb)" \
+                              "before the others which use it as prefix."
+                    return 4
+                fi
+                ret[${ip}]+="${line} "
+            done
+        fi
+    done < "${ini_file}"
+
+    for ip in "${ips[@]}"; do
+        if [[ -z "${ret[${ip}]}" ]]; then
+            LOG error "The value for '${ip}' in '${ini_file}' is empty!"
+            return 5
+        fi
+        # remove the tailing blank.
+        ret[${ip}]="${ret[${ip}]% }"
+    done
+
+    # echo -n "${ret_str#*=}"
+    declare -p ret | sed -r 's/[^=]+=(.*)/\1/'
+}
+
 
 # util::calling_stacks prints the calling stacks with function's name,
 # filename and the line number of the last caller.
@@ -39,6 +104,17 @@ function util::calling_stacks() {
     done
 
     echo -e "${stack}"
+}
+
+
+# util::get_global_envs returns the definitions of some environmet variables or
+# array which are defined by kube-kit (actually defined in etc/*.sh or parser/*.sh)
+# whose name start with any prefix configurated in etc/env.prefix
+function util::get_global_envs() {
+    env_prefix_file="${__KUBE_KIT_DIR__}/etc/env.prefix"
+    env_prefix_regex=$(grep -oP '^[A-Z]+' "${env_prefix_file}" | paste -sd '|')
+    declare_env_prefix="^declare [-aAi]+ (${env_prefix_regex})[A-Z_]*="
+    declare -p | grep -P "${declare_env_prefix}" | tee "${KUBE_KIT_ENV_FILE}"
 }
 
 
@@ -145,4 +221,22 @@ function util::show_time() {
     fi
 
     echo -n "${timer_show}"
+}
+
+
+# this function returns the ip address which is in the kubernetes cluster.
+function util::current_host_ip() {
+    for ip in $(hostname -I); do
+        if [[ "${KUBE_MASTER_IPS_ARRAY_LEN}" -gt 1 && \
+              "${ip}" == "${KUBE_MASTER_VIP}" ]]; then
+            continue
+        elif ipv4::two_ips_in_same_subnet "${ip}" "${KUBE_KIT_HOST_IP}" \
+                                          "${KUBE_KIT_HOST_CIDR}"; then
+            echo -n "${ip}"
+            return 0
+        fi
+    done
+
+    LOG error "failed to get ipaddr of current host in the kubernetes cluster!"
+    return 1
 }
