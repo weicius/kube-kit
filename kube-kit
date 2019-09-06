@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# vim: nu:noai:ts=4
+# shellcheck shell=bash disable=SC1090,SC2034,SC2206,SC2207
+set -o errexit
+set +o pipefail
+
+__KUBE_KIT_DIR__=$(cd "$(dirname ${BASH_SOURCE[0]})" && pwd)
+source "${__KUBE_KIT_DIR__}/library/main.sh"
+source "${__KUBE_KIT_DIR__}/etc/main.env"
+
+if grep -q docker /proc/1/cgroup; then
+    LOG debug "kube-kit is running in a docker container with the container-id:"
+    KUBE_KIT_CONTAINER_ID="$(grep -oP '(?<=/docker/)\S+' /proc/1/cgroup | uniq)"
+    LOG debug "${KUBE_KIT_CONTAINER_ID}"
+fi
+
+################################################################################
+# ***************** parse all the subcommands and its options ******************
+################################################################################
+
+cmd_ini_file="${__KUBE_KIT_DIR__}/etc/cmd.ini"
+declare -a SUBCMDS
+declare -A SUBCMD_OPTIONS
+
+while read -r line; do
+    # exclude lines that are blank or comments.
+    if [[ "${line}" =~ (^#|^;|^$) ]]; then
+        continue
+    elif [[ "${line}" =~ ^\[(.+)\]$ ]]; then
+        subcmd="${BASH_REMATCH[1]}"
+        if util::element_in_array "${subcmd}" "${SUBCMDS[@]}"; then
+            LOG error "The section ${line} is duplicated in ${cmd_ini_file}!"
+            exit 101
+        fi
+        SUBCMDS+=(${subcmd})
+        continue
+    fi
+    options=(${SUBCMD_OPTIONS[${subcmd}]})
+    if util::element_in_array "${line}" "${options[@]}"; then
+        LOG error "The option '${line}' is duplicated in section [${subcmd}]!"
+        exit 102
+    fi
+    SUBCMD_OPTIONS[${subcmd}]+="${line} "
+done < "${cmd_ini_file}"
+
+no_records="false"
+declare -a kube_kit_args
+
+while true; do
+    [[ $# -eq 0 ]] && break
+    case "${1}" in
+        -n|--no-records)
+            no_records="true"
+            shift
+            ;;
+        *)
+            if [[ "${1}" =~ ^[^-] ]]; then
+                kube_kit_args+=("${1}")
+            fi
+            shift
+            ;;
+    esac
+done
+
+SUBCMD="${kube_kit_args[0]}"
+SUBCMD_OPTION="${kube_kit_args[1]}"
+
+if ! util::element_in_array "${SUBCMD}" "${SUBCMDS[@]}"; then
+    LOG error "Invalid subcmd: '${SUBCMD}' for kube-kit command!"
+    usage::kube_kit 103
+else
+    cubcmd_options_array=(${SUBCMD_OPTIONS[${SUBCMD}]})
+    if ! util::element_in_array "${SUBCMD_OPTION}" "${cubcmd_options_array[@]}"; then
+        LOG error "Invalid option '${SUBCMD_OPTION}' for subcmd '${SUBCMD}'!"
+        usage::kube_kit 104
+    fi
+fi
+
+################################################################################
+# ************* parse and validate the configurations of kube-kit **************
+################################################################################
+
+LOG title "Starting to parse all the configurations of kube-kit ..."
+# NOTE: parser/*.sh maybe modify some values in etc/*.env
+source "${__KUBE_KIT_DIR__}/parser/main.sh"
+source "${__KUBE_KIT_DIR__}/etc/main.env"
+
+################################################################################
+# ************ execute actual action of the sub command of kube-kit ************
+################################################################################
+
+start_ns="$(date +%s%N)"
+
+[[ -d "${KUBE_KIT_LOGS_DIR}" ]] || mkdir -p "${KUBE_KIT_LOGS_DIR}"
+current_logfile="${KUBE_KIT_LOGS_DIR}/${SUBCMD}.log"
+current_command="kube-kit ${SUBCMD} ${SUBCMD_OPTION}"
+
+LOG title "Starting to execute the command \`${current_command}\` ..."
+
+# if current SUBCMD is called inside 'kube-kit xx all' (i.e. init or deploy),
+# need to redirect the logs to /dev/null to avoid to record same logs twice.
+[[ "${RECORD_LOGS}" == "false" ]] && current_logfile="/dev/null"
+
+# e.g. if SUBCMD=init, then the function name of init is 'cmd::init'.
+# all functions 'cmd::${SUBCMD,,}' are defined in 'library/command.sh'.
+eval "cmd::${SUBCMD,,}" "${SUBCMD_OPTION}" |& tee -a "${current_logfile}"
+
+# record the exit_code of the command '${SUBCMD^^} ${SUBCMD_OPTION}'
+# ref: http://tldp.org/LDP/abs/html/internalvariables.html#PIPESTATUSREF
+subcmd_exit_code="${PIPESTATUS[0]}"
+# LOG debug "subcmd_exit_code: ${subcmd_exit_code}"
+
+# record the messages of current subcommand completed successfully.
+if [[ "${subcmd_exit_code}" -eq 0 ]]; then
+    LOG info "[${current_command}] completed successfully!" |\
+        tee -a "${current_logfile}"
+    if [[ "${no_records}" == "false" ]]; then
+        echo "$(eval ${DATE_NOW}) ${current_command} completed" >> "${KUBE_KIT_INDICATE_FILE}"
+    fi
+else
+    LOG error "[${current_command}] failed with the exit_code ${subcmd_exit_code}!" |\
+        tee -a "${current_logfile}"
+fi
+
+end_ns="$(date +%s%N)"
+total_time="$(util::show_time $((end_ns - start_ns)))"
+LOG info "[${current_command}] used total time: ${total_time}" | tee -a "${current_logfile}"
+
+# remove the colored characters in the logs file.
+# ref: https://en.wikipedia.org/wiki/ANSI_escape_code
+if [[ "${RECORD_LOGS}" != "false" ]]; then
+    sed -i -r 's/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g' "${current_logfile}"
+fi
+
+exit "${subcmd_exit_code}"

@@ -3,6 +3,88 @@
 # shellcheck shell=bash disable=SC1090,SC2034,SC2206,SC2207
 
 
+function usage::kube_kit_help_msg() {
+	cat <<-EOF
+
+	Usage: ${0} <Subcommand> <Subcommand-Option> [Options]
+
+	Options (can be anywhere):
+	    -n|--no-records      Do not record the successful message of current subcommand
+
+	Subcommand:
+	    check                Check if requirements are satisfied
+	    init                 Initialize the basic environment
+	    deploy               Deploy the specified component
+	    clean                Clean the specified component
+	    update               Update the specified component
+
+	Options for 'check':
+	    env                  Check if basic environment requirements are satisfied
+
+	Options for 'init':
+	    localrepo            Create a local yum mirror in current machine
+	    hostname             Reset hostnames & hosts files on all machines
+	    auto-ssh             Config the certifications to allow ssh into each other
+	    ntp                  Set crontab to sync time to local or remote ntpd servcer
+	    disk                 Auto-partition a standalone disk into LVs to store data separately
+	    glusterfs            Initialize the glusterfs cluster for kubernetes cluster
+	    env                  Config the basic environments on all machines
+	    cert                 Config the certifications for all components in the cluster
+	    all                  Initialize all the basic environments for kubernetes cluster
+
+	Options for 'deploy':
+	    etcd                 Deploy the Etcd (in)secure cluster for kube-apiserver, flannel and calico
+	    flannel              Deploy the Flanneld on all nodes
+	    docker               Deploy the Dockerd on all machines
+	    proxy                Deploy the Reverse-proxy for all the exposed services
+	    master               Deploy the Kubernetes masters
+	    node                 Deploy the Kubernetes nodes
+	    crontab              Deploy the Crontab jobs on all hosts
+	    calico               Deploy the CNI plugin(calico) for kubernetes cluster
+	    coredns              Deploy the CoreDNS addon for kubernetes cluster
+	    heketi               Deploy the Heketi service to manage glusterfs cluster automatically
+	    harbor               Deploy the Harbor docker private image repertory
+	    ingress              Deploy the Nginx ingress controller addon for kubernetes cluster
+	    prometheus           Deploy the Prometheus monitoring for kubernetes cluster
+	    heapster             Deploy the Heapster addon for kubernetes cluster
+	    dashboard            Deploy the Dashboard addon for kubernetes cluster
+	    efk                  Deploy the EFK logging addon for kubernetes cluster
+	    all                  Deploy all the components for kubernetes cluster
+
+	Options for 'clean':
+	    master               Clean the kubernetes masters
+	    node                 Clean the kubernetes nodes
+	    all                  Clean all the components listed above
+
+	Options for 'update':
+	    cluster              Update all the components of kubernetes
+	    node                 Add some NEW nodes into kubernetes cluster
+	    heketi               Add some NEW nodes or NEW devices into heketi cluster
+
+	EOF
+}
+
+
+function usage::kube_kit() {
+    final_help_msg="$(usage::kube_kit_help_msg)"
+    subcmds=($(usage::kube_kit_help_msg | grep -oP "(?<=Options for ')[^']+(?=')"))
+    for subcmd in "${subcmds[@]}"; do
+        subcmd_options=($(usage::kube_kit_help_msg |\
+            sed -nr "/'${subcmd}':/,/^$/s/^\s+(\S+).*/\1/p" | paste -sd ' '))
+        for option in "${subcmd_options[@]}"; do
+            allowed_options=(${SUBCMD_OPTIONS[${subcmd}]})
+            # if you delete/comment the option of subcmd in etc/cmd.ini, we need to
+            # remove the help message of the command 'kube-kit ${subcmd} ${option}'
+            util::element_in_array "${option}" "${allowed_options[@]}" && continue
+            LOG warn "option '${option}' is NOT allowed by the subcmd '${subcmd}'"
+            final_help_msg=$(echo -e "${final_help_msg}" |\
+                             sed -r "/'${subcmd}':/,/^$/{/^\s+${option}/d}")
+        done
+    done
+    echo -e "${final_help_msg}\n" && return "${1:-0}"
+}
+
+
 function usage::ssh::execute() {
     local exit_code="${1:-0}"
 
