@@ -1,0 +1,31 @@
+# all the necessary rpm packages that
+# will be installed on all machines.
+
+acpid
+at
+bash-completion
+conntrack-tools
+createrepo
+device-mapper-persistent-data
+docker-ce-${DOCKER_VERSION}
+etcd-${ETCD_VERSION}
+flannel
+glusterfs
+glusterfs-libs
+glusterfs-server
+htop
+httpd
+iproute
+jq
+keepalived
+lvm2
+mailx
+net-tools
+nginx
+ntp
+psmisc
+python2-xmltodict
+socat
+sshpass
+vim-enhanced
+yum-plugin-priorities
