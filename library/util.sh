@@ -240,3 +240,48 @@ function util::current_host_ip() {
     LOG error "failed to get ipaddr of current host in the kubernetes cluster!"
     return 1
 }
+
+
+function util::start_and_enable() {
+    local service="${1%.service}.service"
+
+    if ! systemctl list-unit-files | grep -q "${service}"; then
+        LOG warn "The service ${service} doesn't exist, can't start it, do nothing!"
+        return 0
+    fi
+
+    systemctl daemon-reload
+    if ! systemctl is-enabled "${service}" &>/dev/null; then
+        systemctl enable "${service}" &>/dev/null
+    fi
+
+    if systemctl is-active "${service}" &>/dev/null; then
+        systemctl stop "${service}" &>/dev/null && sleep 2s
+    fi
+
+    for _ in $(seq 3); do
+        systemctl start "${service}"
+        systemctl is-active "${service}" &>/dev/null && return 0
+    done
+
+    LOG error "Failed to (re)start ${service}, please check it yourself!"
+    return 1
+}
+
+
+function util::stop_and_disable() {
+    local service="${1%.service}.service"
+
+    if ! systemctl list-unit-files | grep -q "${service}"; then
+        LOG warn "The service ${service} doesn't exist, can't stop it, do nothing!"
+        return 0
+    fi
+
+    if systemctl is-enabled "${service}" &>/dev/null; then
+        systemctl disable "${service}" &>/dev/null
+    fi
+
+    if systemctl is-active "${service}" &>/dev/null; then
+        systemctl kill -s SIGKILL -f "${service}" || true
+    fi
+}

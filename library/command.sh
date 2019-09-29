@@ -82,11 +82,11 @@ function cmd::check() {
 function cmd::init() {
     case "${1}" in
         localrepo)
-            if [[ "${USE_LOCAL_REPOS,,}" != "true" ]]; then
+            if [[ "${ENABLE_LOCAL_YUM_REPO,,}" != "true" ]]; then
                 LOG error "You choose NOT to use local repo, exit ..."
                 return 1
             fi
-            LOG info "Creating a local yum mirror on ${LOCAL_REPOS_IP} ..."
+            LOG info "Creating a local yum mirror on ${LOCAL_YUM_REPO_HOST} ..."
             source "${__KUBE_KIT_DIR__}/cmd/init/localrepo.sh"
             ;;
         hostname)
@@ -286,7 +286,7 @@ function cmd::clean() {
             source "${__KUBE_KIT_DIR__}/cmd/clean/kubernetes.sh" "${1}"
             ;;
         all)
-            if [[ "${USE_FORCE_MODE,,}" == "false" ]]; then
+            if [[ "${ENABLE_FORCE_MODE,,}" == "false" ]]; then
                 LOG warn -n "Cleaning all components will DESTROY" \
                             "kubernetes cluster, continue? [y/N]: "
                 read answer1

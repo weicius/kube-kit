@@ -70,3 +70,63 @@ function check::heketi_disks() {
         check::the_disk "${heketi_disk}"
     done
 }
+
+
+function check::distro() {
+    local os_release="/etc/os-release"
+    local redhat_release="/etc/redhat-release"
+    current_ip="$(util::current_host_ip)"
+
+    source "${os_release}"
+    msg="The distro of ${current_ip} is <${PRETTY_NAME}>"
+    err_msg="Tips: kube-kit only supports CentOS-${CENTOS_VERSION}!"
+    if ! grep -iEq '(centos|rhel)' "${os_release}"; then
+        LOG error "${msg}; ${err_msg}"
+        return 1
+    fi
+
+    distro_version=$(awk '{print $4}' "${redhat_release}")
+    msg+="; and release version is <${distro_version}>"
+    if [[ "${distro_version}" =~ ^${CENTOS_VERSION}$ ]]; then
+        msg+="; and kernel version is <$(uname -r)>"
+        LOG debug "${msg}"
+    else
+        LOG error "${msg}; ${err_msg}"
+        return 2
+    fi
+}
+
+
+function check::ceph_mon_osd() {
+    local ceph_mons=(${1//,/ })
+    local ceph_osds=(${2//,/ })
+    current_ip="$(util::current_host_ip)"
+
+    for ceph_mon in "${ceph_mons[@]}"; do
+        ceph_mon_ip="${ceph_mon%%:*}"
+        # check if current node can ping current ceph monitor.
+        if ! util::can_ping "${ceph_mon_ip}"; then
+            LOG error "${current_ip} can NOT ping ceph monitor ${ceph_mon_ip}!"
+            return 1
+        fi
+        # check if current node can connect to current ceph monitor service.
+        if ! curl "${ceph_mon}" &>/dev/null; then
+            LOG error "${current_ip} can NOT connect to ceph monitor ${ceph_mon}!"
+            return 2
+        fi
+    done
+
+    for ceph_osd in "${ceph_osds[@]}"; do
+        ceph_osd_ip="${ceph_osd%%:*}"
+        # check if current node can ping current ceph osd.
+        if ! util::can_ping "${ceph_osd_ip}"; then
+            LOG error "${current_ip} can NOT ping ceph osd ${ceph_osd_ip}!"
+            return 3
+        fi
+        # check if current node can connect to current ceph osd service.
+        if ! curl "${ceph_osd}" &>/dev/null; then
+            LOG error "${current_ip} can NOT connect to ceph osd ${ceph_osd}!"
+            return 4
+        fi
+    done
+}

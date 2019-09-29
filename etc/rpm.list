@@ -24,7 +24,7 @@ net-tools
 nginx
 ntp
 psmisc
-python2-xmltodict
+python-xmltodict
 socat
 sshpass
 vim-enhanced

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # vim: nu:noai:ts=4
-# shellcheck shell=bash disable=SC1090,SC2034,SC2206,SC2207
+# shellcheck shell=bash disable=SC1090,SC2034,SC2046,SC2206,SC2207
 
 ################################################################################
 # ************* validate configurations of localrepo and local ntp *************
@@ -17,7 +17,9 @@ if [[ "${ENABLE_LOCAL_YUM_REPO,,}" == "true" ]]; then
     # NOTE: LOCAL_YUM_RPMS_ARRAY keeps all the necessary rpm packages that
     # will be installed on all machines.
     rpm_list="${__KUBE_KIT_DIR__}/etc/rpm.list"
-    declare -a LOCAL_YUM_RPMS_ARRAY=($(grep -v '^\s*#.*' "${rpm_list}"))
+    declare -a LOCAL_YUM_RPMS_ARRAY
+    # NOTE: can't add double quotes here!
+    LOCAL_YUM_RPMS_ARRAY=($(eval echo $(grep -vE '^(\s*#.*|$)' ${rpm_list})))
 fi
 
 if [[ "${ENABLE_LOCAL_NTP_SERVER,,}" == "true" ]]; then
