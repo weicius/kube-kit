@@ -19,8 +19,10 @@ MAX_SSH_PARALLEL="50"
 # NOTE: should NOT execute more than 10 scp commands to the same target parallelly.
 # use the command to get the default max limits: `grep MaxSessions /etc/ssh/sshd_config`
 # juts set it half of max limits to ensure it safe to execute multiple scp everytime.
-MAX_SCP_PARALLEL="5"
+MAX_SCP_PARALLEL="10"
 
+# need to limit the parallel degree to the minimal of MAX_SSH_PARALLEL and MAX_SCP_PARALLEL
+MAX_LOCAL_PARALLEL="$((MAX_SSH_PARALLEL < MAX_SCP_PARALLEL ? MAX_SSH_PARALLEL : MAX_SCP_PARALLEL))"
 
 ################################################################################
 ########## the definition of the library function ** ssh::execute ** ###########
@@ -631,7 +633,7 @@ function scp::execute_parallel() {
 function local::execute_parallel() {
     local hosts=()
     local func=""
-    local parallel=""
+    local parallel="${MAX_LOCAL_PARALLEL}"
 
     while true; do
         case "${1}" in
@@ -674,15 +676,24 @@ function local::execute_parallel() {
                 fi
                 ;;
             -p|--parallel)
+                # if degree is NOT provided, set it to MAX_LOCAL_PARALLEL.
                 if [[ -z "${2}" || "${2}" =~ ^--? ]]; then
-                    LOG error "'-p|--parallel' requires an argument!"
-                    usage::local_execute_parallel 144
+                    parallel="${MAX_LOCAL_PARALLEL}"
+                    shift
                 elif [[ "${2}" =~ ^[1-9][0-9]*$ ]]; then
-                    parallel="${2}"
+                    # also set it to MAX_LOCAL_PARALLEL if the degree is
+                    # smaller than 2 or larger than MAX_LOCAL_PARALLEL.
+                    if [[ "${2}" -lt 2 || "${2}" -gt "${MAX_LOCAL_PARALLEL}" ]]; then
+                        LOG warn "The parallel degree you provided is out of the range" \
+                                 "[2, ${MAX_LOCAL_PARALLEL}], set it to ${MAX_LOCAL_PARALLEL}!"
+                        parallel="${MAX_LOCAL_PARALLEL}"
+                    else
+                        parallel="${2}"
+                    fi
                     shift 2
                 else
                     LOG error "<${2}> is invalid argument of '-p|--parallel'!"
-                    usage::local_execute_parallel 145
+                    usage::local_execute_parallel 144
                 fi
                 ;;
             -\?|--help)
@@ -700,18 +711,18 @@ function local::execute_parallel() {
 
     if [[ "${#hosts[@]}" -eq 0 ]]; then
         LOG error "'-h|--hosts' is required!"
-        usage::local_execute_parallel 146
+        usage::local_execute_parallel 145
     fi
 
     for host in "${hosts[@]}"; do
         [[ "${host}" =~ ^${IPV4_REGEX}$ ]] && continue
         LOG error "'${host}' is NOT a valid ipv4 address!"
-        usage::local_execute_parallel 147
+        usage::local_execute_parallel 146
     done
 
     if [[ -z "${func}" ]]; then
         LOG error "'-f|--function' is required!"
-        usage::local_execute_parallel 148
+        usage::local_execute_parallel 147
     fi
 
     # prepare the temporary directory to store exit_codes.

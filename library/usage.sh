@@ -242,7 +242,7 @@ function usage::local_execute_parallel() {
 	Usage of <local::execute_parallel> function:
 	    local::execute_parallel -h|--hosts host1 host2 ... hostn \\
 	                            -f|--function local_func \\
-	                            [-p|--parallel parallel_degree] \\
+	                            [-p|--parallel [2, ${MAX_LOCAL_PARALLEL}]] \\
 	                            -- options_and_parameters_for_the_local_func
 
 	Options:
@@ -252,7 +252,9 @@ function usage::local_execute_parallel() {
 	    -p, --parallel     int  Execute the function on N hosts everytime parallelly
 	    -?, --help              Print current help messages and exit
 
-	Tips: Can use the built-in variables '\${HOST}' and '\${INDEX}' in your function
+	Notes:
+	    1. Can use the built-in variables '\${HOST}' and '\${INDEX}' in your function
+	    2. Parallel degree should be in the range: [2, ${MAX_LOCAL_PARALLEL}]!
 
 	Examples:
 	    function local_execute_parallel_test() {
