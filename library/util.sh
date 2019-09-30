@@ -193,6 +193,26 @@ function util::can_ssh() {
 }
 
 
+function util::sleep_random() {
+    local min_seconds="${1:-1}"
+    local max_seconds="${2:-2}"
+
+    local min_msec max_msec tmp_msec
+    min_msec=$((min_seconds * 1000))
+    max_msec=$((max_seconds * 1000))
+
+    if [[ "${max_msec}" -lt "${min_msec}" ]]; then
+        tmp_msec="${min_msec}"
+        min_msec="${max_msec}"
+        max_msec="${tmp_msec}"
+    fi
+
+    local total_msec
+    total_msec=$((min_msec + RANDOM % (max_msec - min_msec)))
+    sleep "$(printf '%d.%03d' $((total_msec / 1000)) $((total_msec % 1000)))s"
+}
+
+
 function util::show_time() {
     local timer_show=""
     local total_ns="${1}"
@@ -284,4 +304,28 @@ function util::stop_and_disable() {
     if systemctl is-active "${service}" &>/dev/null; then
         systemctl kill -s SIGKILL -f "${service}" || true
     fi
+}
+
+
+function util::get_ipaddr_can_ping_gateway() {
+    local gateway="${1}"
+    local ipaddr=""
+    local iface=""
+
+    for netdev in /sys/class/net/*; do
+        # skip all the virtual network devices.
+        [[ $(readlink "${netdev}") =~ virtual ]] && continue
+        phynic=$(basename "${netdev}")
+        if ping -I "${phynic}" -c 4 -W 1 -i 0.05 "${gateway}" &>/dev/null; then
+            # find the interface which can ping the gateway.
+            iface="${phynic}"
+            break
+        fi
+    done
+
+    if [[ -n "${iface}" ]]; then
+        ipaddr="$(ip addr show ${iface} | grep -oP '(?<=inet )[0-9.]+(?=/\d+)')"
+    fi
+
+    echo -n "${ipaddr}"
 }

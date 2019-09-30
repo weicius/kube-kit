@@ -7,16 +7,7 @@
 ################################################################################
 
 if [[ "${ENABLE_LOCAL_YUM_REPO,,}" != "true" ]]; then
-    if ! grep -q aliyun /etc/yum.repos.d/CentOS-Base.repo; then
-        mv /etc/yum.repos.d/CentOS-Base.repo{,.bak}
-        curl -s http://mirrors.aliyun.com/repo/Centos-7.repo \
-             -o /etc/yum.repos.d/CentOS-Base.repo
-    fi
-
-    if [[ ! -f /etc/yum.repos.d/epel.repo ]]; then
-        curl -s http://mirrors.aliyun.com/repo/epel-7.repo \
-             -o /etc/yum.repos.d/epel.repo
-    fi
+    yum install -y -q epel-release
 
     # there packages are necessary for kube-kit.
     for pkg in sshpass jq net-tools iproute; do
