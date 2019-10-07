@@ -23,6 +23,7 @@ mailx
 net-tools
 nginx
 ntp
+parted
 psmisc
 python-xmltodict
 socat

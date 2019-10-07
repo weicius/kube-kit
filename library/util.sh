@@ -329,3 +329,70 @@ function util::get_ipaddr_can_ping_gateway() {
 
     echo -n "${ipaddr}"
 }
+
+
+function util::get_mapper_file() {
+    local vg_name="${1}"
+    local lv_name="${2}"
+
+    local real_block real_mapper_file
+    # find the real block special file which the lv is.
+    real_block=$(readlink -e "/dev/${vg_name}/${lv_name}")
+    for mapper_file in /dev/mapper/*; do
+        [[ ! -L "${mapper_file}" ]] && continue
+        if [[ "${real_block}" == "$(readlink -e ${mapper_file})" ]]; then
+            real_mapper_file="${mapper_file}"
+            break
+        fi
+    done
+
+    # in case the lv_name doesn't exist in the /dev/vg_name
+    if [[ -z "${real_mapper_file}" ]]; then
+        # if vg_name and lv_name contains dash (-), the mapper
+        # name will use multiple dash to replace the one dash.
+        # e.g. vg_name="aa--bb", lv_name="cc--dd"
+        # we should search mapper file using the regex: aa-+bb-+cc-+dd
+        mapper_name_regex=$(sed -r 's|-+|-+|g' <<< "${vg_name}-${lv_name}")
+        # in case the lv_name is LV Pool with metadata and data.
+        real_mapper_file=$(find /dev/mapper/ -type l |\
+            grep -oP "${mapper_name_regex}" | uniq)
+    fi
+
+    echo -n "${real_mapper_file}"
+}
+
+
+function util::romove_contents() {
+    local directory="${1}"
+    [[ -z "${directory}" ]] && return 0
+
+    rpm -qa | grep -q psmisc || yum install -y -q psmisc
+    # if the directory is not used right now, just exit.
+    fuser -a "${directory}" &>/dev/null || return 0
+
+    LOG warn "Killing processes which are accessing ${directory} by force ..."
+    fuser -sk "${directory}"
+    for file_or_dir in ${directory}/*; do
+        rm -rf "${file_or_dir}"
+    done
+}
+
+
+function util::force_umount() {
+    local device="${1}"
+
+    mount_point=$(mount | grep "${device}" | awk '{print $3}')
+    util::romove_contents "${mount_point}"
+
+    LOG warn "Umounting the device ${device} from ${mount_point} by force ..."
+    sed -i "\|${device}|d" /etc/fstab
+    umount -f "${device}"
+}
+
+
+function util::device_size_in_gb() {
+    # calculate the total size of device.
+    # $(parted -s "${device}" unit GiB print | grep -oP '(?<=${device}: )[0-9.]+(?=GiB)')
+    # $(($(blockdev --getsize64 "${device}") / 1024 ** 3))
+    echo -n $(($(lsblk -bdn -o SIZE "${1}") / 1024 ** 3))
+}

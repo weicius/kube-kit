@@ -25,7 +25,7 @@ function usage::kube_kit_help_msg() {
 	    localrepo            Create a local yum mirror in current machine
 	    hostname             Reset hostnames & hosts files on all machines
 	    auto-ssh             Config the certifications to allow ssh into each other
-	    ntp                  Set crontab to sync time to local or remote ntpd servcer
+	    ntp                  Set crontab to sync time from local or remote ntpd server
 	    disk                 Auto-partition a standalone disk into LVs to store data separately
 	    glusterfs            Initialize the glusterfs cluster for kubernetes cluster
 	    env                  Config the basic environments on all machines

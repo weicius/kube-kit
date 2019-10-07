@@ -90,7 +90,7 @@ function cmd::init() {
             source "${__KUBE_KIT_DIR__}/cmd/init/localrepo.sh"
             ;;
         hostname)
-            LOG info "Resetting hostname & /etc/hosts on all machines ..."
+            LOG info "Resetting hostname & /etc/hosts on all the hosts ..."
             source "${__KUBE_KIT_DIR__}/cmd/init/hostname.sh"
             ;;
         auto-ssh)
@@ -98,12 +98,12 @@ function cmd::init() {
             source "${__KUBE_KIT_DIR__}/cmd/init/auto-ssh.sh"
             ;;
         ntp)
-            LOG info "Setting crontab to sync time to local or remote ntpd servcer ..."
+            LOG info "Setting crontab to sync time from local or remote ntpd server ..."
             source "${__KUBE_KIT_DIR__}/cmd/init/ntp.sh"
             ;;
         disk)
             LOG info "Auto-partition a standalone disk into LVs to store data separately ..."
-            source "${__KUBE_KIT_DIR__}/cmd/init/disk-partition.sh"
+            source "${__KUBE_KIT_DIR__}/cmd/init/disk.sh"
             ;;
         glusterfs)
             LOG info "Initializing the glusterfs cluster for kubernetes cluster ..."
