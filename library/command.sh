@@ -106,6 +106,10 @@ function cmd::init() {
             source "${__KUBE_KIT_DIR__}/cmd/init/disk.sh"
             ;;
         glusterfs)
+            if [[ "${ENABLE_GLUSTERFS,,}" != "true" ]]; then
+                LOG warn "You choose NOT to use glusterfs as storage, exit ..."
+                return 2
+            fi
             LOG info "Initializing the glusterfs cluster for kubernetes cluster ..."
             source "${__KUBE_KIT_DIR__}/cmd/init/glusterfs.sh"
             ;;
