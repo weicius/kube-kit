@@ -115,11 +115,11 @@ function cmd::init() {
             ;;
         env)
             LOG info "Configurating the basic environments on all machines ..."
-            source "${__KUBE_KIT_DIR__}/cmd/init/environments.sh"
+            source "${__KUBE_KIT_DIR__}/cmd/init/env.sh"
             ;;
         cert)
-            LOG info "Creating the certifications for all components in the cluster ..."
-            for script in certificates kubeconfig; do
+            LOG info "Generating the certifications for all components in the cluster ..."
+            for script in certificate kubeconfig; do
                 source "${__KUBE_KIT_DIR__}/cmd/init/${script}.sh"
             done
             ;;
@@ -130,19 +130,20 @@ function cmd::init() {
                 LOG warn "All actions of 'init' sub-command have been executed successfully," \
                          "do nothing! Or, you can delete the indicate file" \
                          "'${KUBE_KIT_INDICATE_FILE}' to start over again ..."
-                return 1
-            else
-                LOG info "<kube-kit init all> will start from <${init_all_options[0]}>," \
-                         "because all the options before <${init_all_options[0]}> have" \
-                         "been executed successfully!"
+                return 3
             fi
 
+            first_option="${init_all_options[0]}"
+            LOG info "\`kube-kit init all\` will start from <${first_option}>," \
+                     "because all the options before <${first_option}> have" \
+                     "been executed successfully!"
+
             for option in "${init_all_options[@]}"; do
+                util::sleep_random
                 # the output of subcommand of 'kube-kit init all' command should not be recorded.
                 # otherwise, the local logfile will record the same messages twice. so, we need to
                 # pass a variable 'RECORD_LOGS' to tell 'kube-kit' to drop logs in this situation.
-                bash -c -- "export RECORD_LOGS=false; ${__KUBE_KIT_DIR__}/kube-kit init ${option}"
-                sleep "1.$((RANDOM % 5 + 5))s"
+                bash -c "export RECORD_LOGS=false; ${__KUBE_KIT_DIR__}/kube-kit init ${option}"
             done
     esac
 }
@@ -265,20 +266,20 @@ function cmd::deploy() {
                          "successfully, do nothing! Or, you can delete the indicate" \
                          "file '${KUBE_KIT_INDICATE_FILE}' to start over again ..."
                 return 1
-            else
-                first_option="${deploy_all_options[0]}"
-                LOG info "<kube-kit deploy all> will start from <${first_option}>," \
-                         "because all the options before <${first_option}> have" \
-                         "been executed successfully!"
             fi
 
+            first_option="${deploy_all_options[0]}"
+            LOG info "\`kube-kit deploy all\` will start from <${first_option}>," \
+                     "because all the options before <${first_option}> have" \
+                     "been executed successfully!"
+
             for option in "${deploy_all_options[@]}"; do
+                util::sleep_random
                 # the output of subcommand of 'kube-kit deploy all' command should not
                 # be recorded. otherwise, the local logfile will record the same messages
                 # twice. so, we need to pass a variable 'RECORD_LOGS' to tell 'kube-kit'
                 # to drop logs in this situation.
-                bash -c -- "export RECORD_LOGS=false; ${__KUBE_KIT_DIR__}/kube-kit deploy ${option}"
-                sleep "1.$((RANDOM % 5 + 5))s"
+                bash -c "export RECORD_LOGS=false; ${__KUBE_KIT_DIR__}/kube-kit deploy ${option}"
             done
     esac
 }

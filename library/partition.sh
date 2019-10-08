@@ -71,7 +71,7 @@ function disk::partition() {
     if [[ "${ENABLE_FORCE_MODE,,}" == "false" ]]; then
         LOG warn "Auto-paratition the device using the configurations above" \
                  "on each ${role_name^^} will wipe all data!!"
-        LOG warn -n "Is that all OK? [y/N]:"
+        LOG warn -n "Is that all OK? [Y/n]:"
         read answer
     fi
 

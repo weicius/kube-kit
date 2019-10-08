@@ -29,7 +29,7 @@ function usage::kube_kit_help_msg() {
 	    disk                 Auto-partition a standalone disk into LVs to store data separately
 	    glusterfs            Initialize the glusterfs cluster for kubernetes cluster
 	    env                  Config the basic environments on all machines
-	    cert                 Config the certifications for all components in the cluster
+	    cert                 Generate the certifications for all components in the cluster
 	    all                  Initialize all the basic environments for kubernetes cluster
 
 	Options for 'deploy':

@@ -7,7 +7,8 @@
 ################################################################################
 
 if [[ "${ENABLE_LOCAL_YUM_REPO,,}" != "true" ]]; then
-    yum install -y -q epel-release
+    rpm -qa | grep -q epel-release || \
+        yum install -y -q epel-release
 
     # there packages are necessary for kube-kit.
     for pkg in sshpass jq net-tools iproute; do

@@ -198,8 +198,8 @@ function util::sleep_random() {
     local max_seconds="${2:-2}"
 
     local min_msec max_msec tmp_msec
-    min_msec=$((min_seconds * 1000))
-    max_msec=$((max_seconds * 1000))
+    min_msec=$(python -c "print(int(${min_seconds} * 1000))")
+    max_msec=$(python -c "print(int(${max_seconds} * 1000))")
 
     if [[ "${max_msec}" -lt "${min_msec}" ]]; then
         tmp_msec="${min_msec}"
@@ -372,9 +372,7 @@ function util::romove_contents() {
 
     LOG warn "Killing processes which are accessing ${directory} by force ..."
     fuser -sk "${directory}"
-    for file_or_dir in ${directory}/*; do
-        rm -rf "${file_or_dir}"
-    done
+    rm -rf ${directory:-/tmp}/*
 }
 
 
