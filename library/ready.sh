@@ -3,10 +3,9 @@
 # shellcheck shell=bash disable=SC1090,SC2034,SC2206,SC2207,SC2216
 
 
-function ready::etcd_env() {
-    [[ "${ETCD_PROTOCOL}" == "http" ]] && return 0
+function ready::etcd_certs() {
     for etcd_node_ip in "${ETCD_NODE_IPS_ARRAY[@]}"; do
-        if ! ssh::execute -h "${etcd_node_ip}" -r -- "[[ -d ${KUBE_PKI_DIR} ]]"; then
+        if ! ssh::execute -h "${etcd_node_ip}" -- "[[ -d ${KUBE_PKI_DIR} ]]"; then
             LOG error "You have NOT configurated certs for etcd to use https!"
             LOG info "Please execute './kube-kit init cert' first!"
             return 1
@@ -17,7 +16,7 @@ function ready::etcd_env() {
 
 function ready::etcd_cluster() {
     for etcd_node_ip in "${ETCD_NODE_IPS_ARRAY[@]}"; do
-        ssh::execute -h "${etcd_node_ip}" -r -- "
+        ssh::execute -h "${etcd_node_ip}" -- "
             if [[ ! -f /usr/bin/etcdctl ]]; then
                 exit 1
             elif ! ${ETCDCTL} cluster-health &>/dev/null; then
@@ -31,12 +30,12 @@ function ready::etcd_cluster() {
                 continue
                 ;;
             1)
-                LOG error "Etcd cluster has not been installed!"
+                LOG error "The etcd cluster has not been deployed!"
                 LOG info "Please execute './kube-kit deploy etcd' first!"
                 return 1
                 ;;
             2)
-                LOG error "Etcd cluster is not in ready status!"
+                LOG error "The etcd cluster is not in ready status!"
                 LOG info "Please check etcd cluser first!"
                 return 2
                 ;;
@@ -47,7 +46,7 @@ function ready::etcd_cluster() {
 
 function ready::flanneld() {
     for node_ip in "${KUBE_NODE_IPS_ARRAY[@]}"; do
-        ssh::execute -h "${node_ip}" -r -- "
+        ssh::execute -h "${node_ip}" -- "
             if [[ ! -f /usr/local/bin/flanneld ]]; then
                 exit 1
             elif ! systemctl is-active flanneld.service --quiet; then
@@ -78,7 +77,7 @@ function ready::master_env() {
     fi
 
     for master_ip in "${KUBE_MASTER_IPS_ARRAY[@]}"; do
-        ssh::execute -h "${master_ip}" -r -- "
+        ssh::execute -h "${master_ip}" -- "
             if [[ ! -f /usr/local/bin/kubectl ]]; then
                 exit 1
             fi

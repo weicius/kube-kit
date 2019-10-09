@@ -33,7 +33,7 @@ function usage::kube_kit_help_msg() {
 	    all                  Initialize all the basic environments for kubernetes cluster
 
 	Options for 'deploy':
-	    etcd                 Deploy the Etcd (in)secure cluster for kube-apiserver, flannel and calico
+	    etcd                 Deploy the Etcd secure cluster for kube-apiserver, flannel and calico
 	    flannel              Deploy the Flanneld on all nodes
 	    docker               Deploy the Dockerd on all machines
 	    proxy                Deploy the Reverse-proxy for all the exposed services

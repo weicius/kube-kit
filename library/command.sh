@@ -152,24 +152,19 @@ function cmd::init() {
 function cmd::deploy() {
     case "${1}" in
         etcd)
-            if etcd_env_ready; then
-                LOG info "Deploying the etcd (in)secure cluster for kube-apiserver, flannel and calico ..."
-                source "${__KUBE_KIT_DIR__}/cmd/deploy/etcd-cluster.sh"
-            else
-                return 1
-            fi
+            ready::etcd_certs || return 1
+            LOG info "Deploying the etcd secure cluster for kube-apiserver, flannel and calico ..."
+            source "${__KUBE_KIT_DIR__}/cmd/deploy/etcd.sh"
             ;;
         flannel)
             if [[ "${ENABLE_CNI_PLUGIN,,}" == "true" ]]; then
                 LOG error "You have choosen to use CNI plugin for kubernetes, can NOT deploy flannel!"
                 LOG info "Please execute './kube-kit deploy calico' later!"
                 return 1
-            elif etcd_cluster_ready; then
-                LOG info "Deploying the flanneld on all nodes ..."
-                source "${__KUBE_KIT_DIR__}/cmd/deploy/flannel.sh"
-            else
-                return 2
             fi
+            ready::etcd_cluster || return 2
+            LOG info "Deploying the flanneld on all nodes ..."
+            source "${__KUBE_KIT_DIR__}/cmd/deploy/flannel.sh"
             ;;
         docker)
             LOG info "Deploying the docker-ce-${DOCKER_VERSION} on all machines ..."
