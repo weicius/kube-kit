@@ -9,7 +9,6 @@ createrepo
 device-mapper-persistent-data
 docker-ce-${DOCKER_VERSION}
 etcd-${ETCD_VERSION}
-flannel
 glusterfs
 glusterfs-libs
 glusterfs-server
