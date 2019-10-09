@@ -177,7 +177,11 @@ function cmd::deploy() {
             fi
             ;;
         proxy)
-            LOG info "Deploying the Reverse-proxy for all the exposed services ..."
+            if [[ "${KUBE_MASTER_IPS_ARRAY_LEN}" -eq 1 ]]; then
+                LOG warn "There is only one master, don't need to deploy proxy!"
+                return 0
+            fi
+            LOG info "Deploying the reverse-proxy for all the exposed services ..."
             source "${__KUBE_KIT_DIR__}/cmd/deploy/proxy.sh"
             ;;
         master)
