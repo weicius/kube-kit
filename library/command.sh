@@ -170,7 +170,7 @@ function cmd::deploy() {
             LOG info "Deploying the docker-ce-${DOCKER_VERSION} on all machines ..."
             if [[ "${ENABLE_CNI_PLUGIN,,}" == "true" ]]; then
                 source "${__KUBE_KIT_DIR__}/cmd/deploy/docker.sh"
-            elif flanneld_ready; then
+            elif ready::flanneld; then
                 source "${__KUBE_KIT_DIR__}/cmd/deploy/docker.sh"
             else
                 return 1

@@ -49,7 +49,7 @@ function ready::flanneld() {
         ssh::execute -h "${node_ip}" -- "
             if [[ ! -f /usr/local/bin/flanneld ]]; then
                 exit 1
-            elif ! systemctl is-active flanneld.service --quiet; then
+            elif ! systemctl is-active flanneld.service -q; then
                 exit 2
             else
                 exit 0
@@ -117,7 +117,7 @@ function ready::master_env() {
 
 function ready::node_env() {
     for node_ip in "${KUBE_NODE_IPS_ARRAY[@]}"; do
-        ssh::execute -h "${node_ip}" -r -- "
+        ssh::execute -h "${node_ip}" -- "
             if [[ ! -f /usr/local/bin/kubectl ]]; then
                 exit 1
             elif ! systemctl is-active docker.service --quiet; then
