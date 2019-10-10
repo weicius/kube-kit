@@ -83,8 +83,8 @@ function init_kube_env() {
     systemctl daemon-reload && systemctl restart sshd
 
     # these packages shouldn't be installed on all the hosts.
-    local exclude_pkgs=("createrepo" "docker-ce" "etcd" "flannel"
-                        "glusterfs" "httpd" "keepalived" "nginx")
+    local exclude_pkgs=("docker-ce" "etcd" "nginx" "keepalived"
+                        "httpd" "createrepo" "glusterfs")
     exclude_pkgs_regex="($(sed 's/ /|/g' <<< "${exclude_pkgs[*]}"))"
 
     LOG debug "Installing some useful packages on ${current_ip} ..."

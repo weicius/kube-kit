@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # vim: nu:noai:ts=4
-# shellcheck shell=bash disable=SC1090,SC2034,SC2206,SC2207
+# shellcheck shell=bash disable=SC1083,SC1090,SC2034,SC2206,SC2207
 
 # note: this function returns an array's defination.
 # e.g. ret_str="$(util::parse_ini /path/to/ini/file)"
@@ -393,4 +393,59 @@ function util::device_size_in_gb() {
     # $(parted -s "${device}" unit GiB print | grep -oP '(?<=${device}: )[0-9.]+(?=GiB)')
     # $(($(blockdev --getsize64 "${device}") / 1024 ** 3))
     echo -n $(($(lsblk -bdn -o SIZE "${1}") / 1024 ** 3))
+}
+
+
+function util::get_cpu_type() {
+    local cpu_info_file="/proc/cpuinfo"
+    # e.g. Intel(R) Core(TM) i7-6700K CPU @ 4.00GHz
+    local intel_core_cpu_regex="Intel\([a-z]+\) Core\([a-z]+\) (.*)\s+CPU @ [0-9.]+GHz"
+    # e.g. Intel(R) Xeon(R) CPU E5-2620 v4 @ 2.10GHz
+    local intel_xeon_cpu_regex="Intel\([a-z]+\) Xeon\([a-z]+\) CPU\s+(.*) @ [0-9.]+GHz"
+    local hypervisor=""
+    local cpu_type=""
+
+    # Notes: 'lscpu' command maybe does NOT output the informations of cpu flags.
+    # just set 'cpu_type' to 'hypervisorName-virtual-machine' if the host is a VM.
+    if grep -iq '^flags.*hypervisor.*' "${cpu_info_file}"; then
+        hypervisor=$(dmesg | grep -oP '(?<=Hypervisor detected: ).*')
+        echo -n "${hypervisor,,}-virtual-machine"
+        return 0
+    fi
+
+    # NOTE: only support to detect two Intel serials: Core or Xeon
+    intel_cpu_serial=$(lscpu | sed -nr 's|.*\)\s+([a-z]+)\(.*|\L\1|ip')
+    cpu_type="intel-${intel_cpu_serial}"
+    if [[ "${intel_cpu_serial}" =~ ^(core|xeon)$ ]]; then
+        # intel_cpu_regex_varname="intel_${intel_cpu_serial}_cpu_regex"
+        # intel_cpu_regex="${!intel_cpu_regex_varname}"
+        intel_cpu_regex="$(eval echo \${intel_${intel_cpu_serial}_cpu_regex})"
+        cpu_version=$(lscpu | sed -nr "s|^Model name:\s+${intel_cpu_regex}|\1|ip")
+        # trim the leading and trailing whitespace and translate whitespace to dash.
+        cpu_version="$(awk '{$1=$1};1' <<< ${cpu_version} | sed 's| |-|g')"
+    fi
+
+    [[ -n "${cpu_version}" ]] && cpu_type+="-${cpu_version}"
+    echo -n "${cpu_type,,}"
+}
+
+
+function util::get_gpu_type() {
+    local gpu_type="nogpus"
+    if ls /dev/nvidia* &>/dev/null; then
+        gpu_type=$(nvidia-smi -L |\
+            sed -nr 's|^GPU [0-9]+: ([^(]+) \(UUID.*|nvidia-\L\1|p' | uniq)
+    fi
+
+    echo -n "${gpu_type// /-}"
+}
+
+
+function util::get_cpu_details() {
+    lscpu | sed -nr 's|^Model name:\s+([^\s].*)|\1|p'
+}
+
+
+function util::get_gpu_details() {
+    nvidia-smi -L 2>/dev/null | grep -oP '(?<=\d: ).*(?= \()' | uniq
 }
