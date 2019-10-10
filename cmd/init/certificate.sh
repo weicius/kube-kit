@@ -41,7 +41,7 @@ function generate_ca_certificates() {
 	{
 	    "signing": {
 	        "default": {
-	            "expiry": "87600h"
+	            "expiry": "${KUBE_PKI_EXPIRY}"
 	        },
 	        "profiles": {
 	            "kubernetes": {
@@ -51,7 +51,7 @@ function generate_ca_certificates() {
 	                    "server auth",
 	                    "client auth"
 	                ],
-	                "expiry": "87600h"
+	                "expiry": "${KUBE_PKI_EXPIRY}"
 	            }
 	        }
 	    }

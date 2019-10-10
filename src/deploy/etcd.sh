@@ -73,6 +73,11 @@ function config_etcd() {
 
 
 function start_etcd() {
+    sed -i -r "/MemoryLimit/d" \
+        /usr/lib/systemd/system/etcd.service
+    sed -i -r "/ExecStart/iMemoryLimit=${ETCD_MEMORY_LIMIT}" \
+        /usr/lib/systemd/system/etcd.service
+
     chown -R etcd:etcd "${ETCD_CONFIG_DIR}" "${ETCD_WORKDIR}"
     LOG debug "Starting etcd.service on $(util::current_host_ip) ..."
     util::start_and_enable etcd.service

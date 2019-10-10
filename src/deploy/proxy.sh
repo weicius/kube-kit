@@ -81,17 +81,6 @@ function config_nginx() {
 	        __STREAM_REVERSE_PROXY_SETTINGS__
 	    }
 
-	    upstream k8s-insecure-apiservers {
-	        __REVERSE_PROXY_ALGORITHM__
-	        __KUBE_INSECURE_SERVERS__
-	    }
-	    server {
-	        listen ${KUBE_VIP_INSECURE_PORT};
-	        proxy_pass k8s-insecure-apiservers;
-	        access_log /var/log/nginx/k8s-insecure-apiservers.log pretty_stream_logs __nginx_logs_settings__;
-	        __STREAM_REVERSE_PROXY_SETTINGS__
-	    }
-
 	    # ${end_msg_of_apiservers}
 	}
 	EOF
@@ -100,7 +89,6 @@ function config_nginx() {
     for master_ip in "${KUBE_MASTER_IPS_ARRAY[@]}"; do
         sed -r -i \
             -e "/__KUBE_SECURE_SERVERS__/i\        server ${master_ip}:${KUBE_APISERVER_SECURE_PORT};" \
-            -e "/__KUBE_INSECURE_SERVERS__/i\        server ${master_ip}:${KUBE_APISERVER_INSECURE_PORT};" \
             /etc/nginx/nginx.conf
     done
 
@@ -129,7 +117,6 @@ function config_nginx() {
     # delete all the placeholders finally or nginx.conf will be invalid.
     sed -r -i \
         -e '/__KUBE_SECURE_SERVERS__/d' \
-        -e '/__KUBE_INSECURE_SERVERS__/d' \
         -e '/__REVERSE_PROXY_ALGORITHM__/d' \
         -e '/__STREAM_REVERSE_PROXY_SETTINGS__/d' \
         /etc/nginx/nginx.conf

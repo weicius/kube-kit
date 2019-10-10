@@ -63,6 +63,7 @@ function config_flanneld() {
 
 	[Service]
 	Type=notify
+	MemoryLimit=${FLANNELD_MEMORY_LIMIT}
 	ExecStart=/usr/local/bin/flanneld \\
 	            -etcd-cafile=${KUBE_PKI_DIR}/ca.pem \\
 	            -etcd-certfile=${KUBE_PKI_DIR}/etcd.pem \\

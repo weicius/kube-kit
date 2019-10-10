@@ -166,37 +166,26 @@ fi
 ################################################################################
 
 if [[ "${KUBE_MASTER_IPS_ARRAY_LEN}" -gt 1 ]]; then
-    if [[ -z "${KUBE_MASTER_VIP}" || -z "${KUBE_VIP_SECURE_PORT}" || -z "${KUBE_VIP_INSECURE_PORT}" ]]; then
-        LOG error "In HA mode, KUBE_MASTER_VIP, KUBE_VIP_SECURE_PORT and KUBE_VIP_INSECURE_PORT are required!"
+    if [[ -z "${KUBE_MASTER_VIP}" || -z "${KUBE_VIP_SECURE_PORT}" ]]; then
+        LOG error "In HA mode, KUBE_MASTER_VIP and KUBE_VIP_SECURE_PORT are required!"
         exit 117
     elif [[ "${KUBE_VIP_SECURE_PORT}" -eq "${KUBE_APISERVER_SECURE_PORT}" ]]; then
         LOG error "In HA mode, KUBE_VIP_SECURE_PORT and KUBE_APISERVER_SECURE_PORT can NOT be the same!"
         exit 118
-    elif [[ "${KUBE_VIP_INSECURE_PORT}" -eq "${KUBE_APISERVER_INSECURE_PORT}" ]]; then
-        LOG error "In HA mode, KUBE_VIP_INSECURE_PORT and KUBE_APISERVER_INSECURE_PORT can NOT be the same!"
-        exit 119
     fi
 else
     # in non-HA mode, there is only ONE master, and we set it to KUBE_MASTER_VIP by force.
     # because we can use KUBE_MASTER_VIP to specify the host of kube-apiserver no matter using HA or not.
     KUBE_MASTER_VIP="${KUBE_MASTER_IPS_ARRAY[0]}"
-    sed -i -r \
-        -e "s|^(KUBE_MASTER_VIP=).*|\1\"${KUBE_MASTER_VIP}\"|" \
-        "${__KUBE_KIT_DIR__}/etc/kube-kit.env"
+    sed -i -r "s|^(KUBE_MASTER_VIP=).*|\1\"${KUBE_MASTER_VIP}\"|" "${__KUBE_KIT_DIR__}/etc/kube-kit.env"
 
-    # in non-HA mode, set KUBE_VIP_SECURE_PORT to KUBE_APISERVER_SECURE_PORT by force, so does KUBE_VIP_INSECURE_PORT
-    # because we can use KUBE_VIP_{,IN}SECURE_PORT to specify the ports of kube-apiserver no matter using HA or not.
+    # in non-HA mode, set KUBE_VIP_SECURE_PORT to KUBE_APISERVER_SECURE_PORT by force.
+    # because we can use KUBE_VIP_SECURE_PORT to specify the port of kube-apiserver no matter using HA or not.
     KUBE_VIP_SECURE_PORT="${KUBE_APISERVER_SECURE_PORT}"
-    KUBE_VIP_INSECURE_PORT="${KUBE_APISERVER_INSECURE_PORT}"
-    sed -i -r \
-        -e "s|^(KUBE_VIP_SECURE_PORT=).*|\1\"${KUBE_VIP_SECURE_PORT}\"|" \
-        -e "s|^(KUBE_VIP_INSECURE_PORT=).*|\1\"${KUBE_VIP_INSECURE_PORT}\"|" \
-        "${__KUBE_KIT_DIR__}/etc/port.env"
+    sed -i -r "s|^(KUBE_VIP_SECURE_PORT=).*|\1\"${KUBE_VIP_SECURE_PORT}\"|" "${__KUBE_KIT_DIR__}/etc/port.env"
 fi
 
 KUBE_SECURE_APISERVER="https://${KUBE_MASTER_VIP}:${KUBE_VIP_SECURE_PORT}"
-KUBE_INSECURE_APISERVER="http://${KUBE_MASTER_VIP}:${KUBE_VIP_INSECURE_PORT}"
-
 KUBE_SECURE_API_ALLOWED_ALL_IPS_ARRAY=($(util::sort_uniq_array "${KUBE_MASTER_VIP}" "${KUBE_ALL_IPS_ARRAY[@]}"))
 
 HARBOR_HOST="${KUBE_MASTER_VIP}"

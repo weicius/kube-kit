@@ -72,7 +72,7 @@ function ready::flanneld() {
 
 
 function ready::master_env() {
-    if ! etcd_cluster_ready; then
+    if ! ready::etcd_cluster; then
          return 1
     fi
 
@@ -81,7 +81,6 @@ function ready::master_env() {
             if [[ ! -f /usr/local/bin/kubectl ]]; then
                 exit 1
             fi
-
             current_version=\$(kubectl version --client --short | awk '{print \$3}')
             if [[ \${current_version} != ${KUBE_VERSION} ]]; then
                 exit 2
@@ -96,17 +95,17 @@ function ready::master_env() {
                 continue
                 ;;
             1)
-                LOG error "There is NO binary files of kubernetes on '${master_ip}'!"
+                LOG error "There is NO binary files of kubernetes on ${master_ip}!"
                 LOG info "Please execute './kube-kit init env' first!"
                 return 2
                 ;;
             2)
-                LOG error "The version of kubectl on '${master_ip}' is NOT equal to '${KUBE_VERSION}'!"
+                LOG error "The version of kubectl on ${master_ip} is NOT equal to ${KUBE_VERSION}!"
                 LOG info "Please execute './kube-kit init env' first!"
                 return 3
                 ;;
             3)
-                LOG error "There is NO certifications on '${master_ip}'!"
+                LOG error "There is NO certifications on ${master_ip}!"
                 LOG info "Please execute './kube-kit init cert' first!"
                 return 4
                 ;;
@@ -118,9 +117,9 @@ function ready::master_env() {
 function ready::node_env() {
     for node_ip in "${KUBE_NODE_IPS_ARRAY[@]}"; do
         ssh::execute -h "${node_ip}" -- "
-            if [[ ! -f /usr/local/bin/kubectl ]]; then
+            if ! systemctl is-active docker.service -q; then
                 exit 1
-            elif ! systemctl is-active docker.service --quiet; then
+            elif ! kubectl get cs &>/dev/null; then
                 exit 2
             else
                 exit 0
@@ -131,13 +130,13 @@ function ready::node_env() {
                 continue
                 ;;
             1)
-                LOG error "There is NO binary files of kubernetes on '${node_ip}'!"
-                LOG info "Please execute './kube-kit init env' first!"
+                LOG error "Docker daemon is NOT ready on ${node_ip}!"
+                LOG info "Please execute './kube-kit deploy docker' first!"
                 return 1
                 ;;
             2)
-                LOG error "Docker daemon is NOT ready on '${node_ip}'!"
-                LOG info "Please execute './kube-kit deploy docker' first!"
+                LOG error "Components of kubernetes master are not ready!"
+                LOG info "Please execute './kube-kit deploy master' first!"
                 return 2
                 ;;
         esac

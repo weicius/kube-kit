@@ -37,8 +37,8 @@ function usage::kube_kit_help_msg() {
 	    flannel              Deploy the Flanneld on all nodes
 	    docker               Deploy the Dockerd on all machines
 	    proxy                Deploy the Reverse-proxy for all the exposed services
-	    master               Deploy the Kubernetes masters
-	    node                 Deploy the Kubernetes nodes
+	    master               Deploy the Kubernetes master components
+	    node                 Deploy the Kubernetes node components
 	    crontab              Deploy the Crontab jobs on all hosts
 	    calico               Deploy the CNI plugin(calico) for kubernetes cluster
 	    coredns              Deploy the CoreDNS addon for kubernetes cluster

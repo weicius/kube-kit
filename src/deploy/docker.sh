@@ -55,6 +55,7 @@ function config_docker() {
 	# the default is not to use systemd for cgroups because the delegate issues still
 	# exists and systemd currently does not support the cgroup feature set required
 	# for containers run by docker
+	MemoryLimit=${DOCKERD_MEMORY_LIMIT}
 	ExecStart=/usr/bin/dockerd \\
 	            --containerd=/run/containerd/containerd.sock \\
 	            --data-root=${DOCKER_WORKDIR} \\

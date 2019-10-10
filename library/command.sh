@@ -185,14 +185,14 @@ function cmd::deploy() {
             source "${__KUBE_KIT_DIR__}/cmd/deploy/proxy.sh"
             ;;
         master)
-            master_env_ready || return 1
-            LOG info "Deploying the kubernetes masters ..."
-            source "${__KUBE_KIT_DIR__}/cmd/deploy/k8s-masters.sh"
+            ready::master_env || return 1
+            LOG info "Deploying the kubernetes master components ..."
+            source "${__KUBE_KIT_DIR__}/cmd/deploy/k8s-master.sh"
             ;;
         node)
-            node_env_ready || return 1
-            LOG info "Deploying the kubernetes nodes ..."
-            source "${__KUBE_KIT_DIR__}/cmd/deploy/k8s-nodes.sh"
+            ready::node_env || return 1
+            LOG info "Deploying the kubernetes node components ..."
+            source "${__KUBE_KIT_DIR__}/cmd/deploy/k8s-node.sh"
             ;;
         crontab)
             LOG info "Deploying the Crontab jobs on all hosts ..."
