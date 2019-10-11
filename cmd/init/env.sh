@@ -12,3 +12,9 @@ prepare::kube_node_binary_files "${KUBE_NODE_IPS_ARRAY[@]}"
 ssh::execute_parallel -h "all" \
                       -s "${functions_file}" \
                       -- "init_kube_env"
+
+# prepare all binary files of cni and deliver them.
+if [[ "${ENABLE_CNI_PLUGIN,,}" == "true" ]]; then
+    source "${__KUBE_KIT_DIR__}/util/prepare-cni-files.sh"
+    prepare::cni_binary_files "${KUBE_NODE_IPS_ARRAY[@]}"
+fi

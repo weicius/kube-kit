@@ -5,6 +5,7 @@
 source "${__KUBE_KIT_DIR__}/library/logging.sh"
 source "${__KUBE_KIT_DIR__}/library/ipv4.sh"
 source "${__KUBE_KIT_DIR__}/library/util.sh"
+source "${__KUBE_KIT_DIR__}/library/wait.sh"
 source "${__KUBE_KIT_DIR__}/library/usage.sh"
 source "${__KUBE_KIT_DIR__}/library/ready.sh"
 source "${__KUBE_KIT_DIR__}/library/execute.sh"

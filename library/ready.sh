@@ -144,6 +144,12 @@ function ready::node_env() {
 }
 
 
+function ready::all_nodes() {
+    ready_nodes=$(kubectl get node 2>/dev/null | grep -wc 'Ready')
+    ((ready_nodes == KUBE_NODE_IPS_ARRAY_LEN))
+}
+
+
 function ready::coredns() {
     if ! kubectl --namespace kube-system get deployment coredns &>/dev/null; then
         LOG error "You have NOT deployed coredns, please execute './kube-kit deploy coredns' first!"

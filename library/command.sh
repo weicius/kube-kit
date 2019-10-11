@@ -158,7 +158,7 @@ function cmd::deploy() {
             ;;
         flannel)
             if [[ "${ENABLE_CNI_PLUGIN,,}" == "true" ]]; then
-                LOG error "You have choosen to use CNI plugin for kubernetes, can NOT deploy flannel!"
+                LOG error "You have enabled CNI plugin for kubernetes, can NOT deploy flannel!"
                 LOG info "Please execute './kube-kit deploy calico' later!"
                 return 1
             fi
@@ -199,29 +199,15 @@ function cmd::deploy() {
             source "${__KUBE_KIT_DIR__}/cmd/deploy/crontab.sh"
             ;;
         calico)
-            if [[ "${ENABLE_CNI_PLUGIN,,}" == "false" ]]; then
-                LOG error "You have NOT choosen to use CNI plugin, can NOT deploy CNI plugin(calico)!"
+            if [[ "${ENABLE_CNI_PLUGIN,,}" != "true" ]]; then
+                LOG error "You have disabled CNI plugin for kubernetes, can NOT deploy calico!"
                 return 1
-            elif ! util::can_ping "${KUBE_MASTER_VIP}"; then
-                LOG error "KUBE_MASTER_VIP '${KUBE_MASTER_VIP}' can NOT be reached now!"
-                # if there is only ONE master, KUBE_MASTER_VIP should be reached by ping.
-                LOG info "You might have forgotten to execute './kube-kit deploy proxy'"
+            elif ! ready::all_nodes; then
+                LOG error "Kubernetes nodes are NOT all be in Ready status now!"
                 return 2
             fi
-
-            for _ in $(seq 5); do
-                if [[ $(kubectl get nodes --no-headers | grep -wc 'Ready') -ne \
-                      ${KUBE_NODE_IPS_ARRAY_LEN} ]]; then
-                    sleep "$((RANDOM % 5 + 5))s"
-                else
-                    LOG info "Deploying the CNI plugin(calico) for kubernetes cluster ..."
-                    source "${__KUBE_KIT_DIR__}/cmd/deploy/calico.sh"
-                    return 0
-                fi
-            done
-
-            LOG error "Kubernetes nodes are NOT all be in Ready status now!"
-            return 3
+            LOG info "Deploying the CNI plugin(calico) for kubernetes cluster ..."
+            source "${__KUBE_KIT_DIR__}/cmd/deploy/calico.sh"
             ;;
         coredns)
             LOG info "Deploying the CoreDNS addon for kubernetes cluster ..."

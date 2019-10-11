@@ -273,3 +273,63 @@ function usage::local_execute_parallel() {
 
     return "${exit_code}"
 }
+
+
+function usage::wait::until() {
+    local exit_code="${1:-0}"
+
+	cat <<-EOF
+	wait::until is a util function which can execute a function every 'interval'
+	seconds until it succeeds or timeout exceeds.
+
+	Usage of <wait::until> function:
+	    wait::until -t|--timeout timeout_seconds \\
+	                -i|--interval interval_seconds \\
+	                -f|--function func_name \\
+	                [-- option_and_parameter_for_func]
+
+	Options:
+	    -t, --timeout  *integer  Force to exit the function func_name if timeout exceed
+	    -i, --interval *integer  Execute the function func_name every interval seconds
+	    -f, --function *string   The function to be executed every interval seconds
+	    -?, --help               Print current help messages and exit
+
+	Examples:
+	    $ wait::until -t 100 -i 10 -f foo -- -x 1 -y
+	    wait::until will execute 'foo -x 1 -y' every 10s with timeout 100s
+
+	Notes:
+	    you must use '--' to seperate the option and parameter (if necessary)
+	    of func_name from the the option and parameter of wait::until itself!
+
+	EOF
+
+    return "${exit_code}"
+}
+
+
+function usage::wait::resource() {
+    local exit_code="${1:-0}"
+
+	cat <<-EOF
+	wait::resource is a util function which will wait at most ${SECONDS_TO_WAIT} seconds
+	until the kubernetes resource (daemonset or deployment) is ready to serve (a.k.a all
+	pods are running) or deleted completely (a.k.a. all pods are deleted).
+
+	Usage of <wait::resource> function:
+	    wait::resource [-N|--namespace namespace] \\
+	                   -t|--type resource_type \\
+	                   -n|--name resource_name \\
+	                   -s|--status wait_status
+
+	Options:
+	    -N, --namespace  string  The namespace of the resource (Default: kube-system)
+	    -t, --type      *string  The resource type (only support daemonset/deployment)
+	    -n, --name      *string  The resource name to be checked
+	    -s, --status    *string  The status to wait (only support ready and deleted)
+	    -?, --help               Print current help messages and exit
+
+	EOF
+
+    return "${exit_code}"
+}

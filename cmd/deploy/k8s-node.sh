@@ -8,18 +8,11 @@ ssh::execute_parallel -h "node" \
                       -s "${functions_file}" \
                       -- "config_k8s_node"
 
-LOG debug "Waiting at most 100 seconds for all nodes to in Ready status ..."
-for ((idx=0; idx<10; idx++)); do
-    util::sleep_random 5 10
-    ready_nodes=$(kubectl get node 2>/dev/null | grep -wc 'Ready' || true)
-    [[ "${ready_nodes}" -eq "${KUBE_NODE_IPS_ARRAY_LEN}" ]] && break
-done
-
-if [[ "${idx}" -eq 10 ]]; then
+LOG debug "Waiting at most 100 seconds until all nodes are in Ready status ..."
+if ! wait::until -t 100 -i 5 -f ready::all_nodes; then
     LOG error "Failed to wait for all nodes to be in Ready status ..."
     exit 1
 fi
-
 
 LOG info "Setting master role for all kubernetes masters ..."
 ssh::execute_parallel -h "master" \

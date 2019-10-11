@@ -14,9 +14,10 @@ function upload_preload_images {
     preloaded_images_num=$(ssh::execute -h "${HOST}" 'docker images 2>/dev/null' |\
           grep -cP '(pause|calico|coredns|heketi)' || true)
 
-    # need to load the following 6 images firstly:
-    # pause-amd64, calico-node, calico-cni, calico-kube-controllers, coredns, heketi
-    [[ "${preloaded_images_num}" -eq 6 ]] && return 0 || true
+    # need to load the following 7 images firstly:
+    # pause-amd64, coredns, heketi
+    # calico-node, calico-cni, calico-kube-controllers, calico-pod2daemon-flexvol
+    [[ "${preloaded_images_num}" -eq 7 ]] && return 0 || true
 
     LOG debug "Loading preloaded images on ${HOST} ..."
     scp::execute -h "${HOST}" \
