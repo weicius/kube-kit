@@ -449,3 +449,9 @@ function util::get_cpu_details() {
 function util::get_gpu_details() {
     nvidia-smi -L 2>/dev/null | grep -oP '(?<=\d: ).*(?= \()' | uniq
 }
+
+
+function util::get_glusterfs_node_name() {
+    peer_nodes="($(gluster peer status |& grep -oP '(?<=^Hostname: ).*' | paste -sd '|'))"
+    awk "/${GLUSTERFS_NODE_NAME_PREFIX}/{print \$2}" /etc/hosts | grep -vP "${peer_nodes}"
+}
