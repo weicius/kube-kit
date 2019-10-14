@@ -25,6 +25,34 @@ else
 fi
 
 ################################################################################
+# ********* generate KUBE_ENV_PREFIX_REGEX and KUBE_LIB_FUNCTION_REGEX *********
+################################################################################
+
+env_prefix_file="${__KUBE_KIT_DIR__}/etc/env.prefix"
+KUBE_ENV_PREFIX_REGEX=$(grep -oP '^[A-Z]+' "${env_prefix_file}" | paste -sd '|')
+
+library_dir="${__KUBE_KIT_DIR__}/library"
+# NOTE: kube-kit support the format of definitions of functions:
+# 1). the keyword `function` must be at the leftest postion of a line.
+# 2). the left brace `{` can be at the same line with `func_name` or a newline.
+# 3). the right brace `}` must be at the leftest postion of a line.
+# 4). there can be arbitrary spaces between `function` and `func_name`.
+# 5). there can be arbitrary spaces between `func_name` and `()`.
+# ^function func_name() {
+# ^    blabla...
+# ^}
+# ^function func_name {
+# ^    blabla...
+# ^}
+# ^func_name() {
+# ^    blabla...
+# ^}
+
+KUBE_FUNCTION_DEF_REGEX="^(function\s+([a-zA-Z0-9:_]+)|([a-zA-Z0-9:_]+)\s*\(\)).*"
+KUBE_LIB_FUNCTION_REGEX=$(find "${library_dir}" -type f -name '*.sh' -exec cat {} + |\
+    sed -nr "s/${KUBE_FUNCTION_DEF_REGEX}/\2\3/p" | paste -sd '|')
+
+################################################################################
 # ********************* validate the version of kubernetes *********************
 ################################################################################
 

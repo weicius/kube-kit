@@ -19,7 +19,7 @@ function install_nginx() {
 
     if ! rpm -qa | grep -q '^nginx-'; then
         LOG info "Installing nginx on ${master_ip} ..."
-        yum install -y -q nginx
+        yum install -y nginx &>/dev/null
     fi
 }
 
@@ -83,18 +83,66 @@ function config_nginx() {
 
 	    # ${end_msg_of_apiservers}
 	}
+
+	http {
+	    # nginx built-in variables: http://nginx.org/en/docs/varindex.html
+	    # ref: http://nginx.org/en/docs/http/ngx_http_log_module.html
+	    # https://www.nginx.com/blog/using-nginx-logging-for-application-performance-monitoring
+	    # \$request_time - Full request time, starting when NGINX reads the first byte from the
+	    # client and ending when NGINX sends the last byte of the response body
+	    # \$upstream_connect_time - Time spent establishing a connection with an upstream server
+	    # \$upstream_header_time - Time between establishing a connection to an upstream server
+	    # and receiving the first byte of the response header
+	    # \$upstream_response_time - Time between establishing a connection to an upstream server
+	    # and receiving the last byte of the response body
+	    # P.S. \$upstream_header_time is included in \$upstream_response_time
+	    # \$request_time == \$upstream_connect_time + \$upstream_response_time
+	    log_format pretty_http_logs
+	               '[\$time_iso8601] \$remote_addr:\$remote_port => '
+	               '\$server_addr:\$server_port => \$upstream_addr '
+	               '"\$request" \$status \$body_bytes_sent "\$http_user_agent" '
+	               'rt=\$request_time uct=\$upstream_connect_time '
+	               'uht=\$upstream_header_time urt=\$upstream_response_time';
+
+	    ##############################
+	    ## reverse-proxy for heketi ##
+	    ##############################
+	    upstream heketi {
+	        __REVERSE_PROXY_ALGORITHM__
+	        __KUBE_HEKETI__
+	    }
+	    server {
+	        listen ${KUBE_VIP_HEKETI_PORT};
+	        location / {
+	            proxy_pass http://heketi;
+	            __HTTP_REVERSE_PROXY_SETTINGS__
+	        }
+	        access_log /var/log/nginx/heketi.log pretty_http_logs __nginx_logs_settings__;
+	    }
+	}
 	EOF
 
-    # use nginx to reverse kube-apiservers only when the number of masters is large than 1.
-    for master_ip in "${KUBE_MASTER_IPS_ARRAY[@]}"; do
-        sed -r -i \
-            -e "/__KUBE_SECURE_SERVERS__/i\        server ${master_ip}:${KUBE_APISERVER_SECURE_PORT};" \
+    if [[ "${KUBE_MASTER_IPS_ARRAY_LEN}" -eq 1 ]] ; then
+        # if there is only one master, don NOT need to reverse proxy for kube-apiservers.
+        sed -i "/${start_msg_of_apiservers}/,/${end_msg_of_apiservers}/d" /etc/nginx/nginx.conf
+    else
+        # use nginx to reverse kube-apiservers only when the number of masters is large than 1.
+        for master_ip in "${KUBE_MASTER_IPS_ARRAY[@]}"; do
+            sed -i -r \
+                -e "/__KUBE_SECURE_SERVERS__/i\        server ${master_ip}:${KUBE_APISERVER_SECURE_PORT};" \
+                /etc/nginx/nginx.conf
+        done
+    fi
+
+    for node_ip in "${KUBE_NODE_IPS_ARRAY[@]}"; do
+        sed -i -r \
+            -e "/__KUBE_HEKETI__/i\        server ${node_ip}:${KUBE_HEKETI_PORT};" \
             /etc/nginx/nginx.conf
     done
 
     # set reverse proxy algorithm for all the proxies and logs settings
     # and the max_fails & fail_timeout of all the upstreams.
-    sed -r -i \
+    sed -i -r \
         -e 's|__REVERSE_PROXY_ALGORITHM__|hash $remote_addr consistent;|' \
         -e 's|__nginx_logs_settings__|buffer=8k flush=10s|' \
         -e 's|(server [0-9.:]+)|\1 max_fails=3 fail_timeout=15s|' \
@@ -109,16 +157,48 @@ function config_nginx() {
     )
 
     for setting in "${stream_reverse_proxy_settings[@]}"; do
-        sed -r -i \
+        sed -i -r \
             -e "/__STREAM_REVERSE_PROXY_SETTINGS__/i\        ${setting}" \
             /etc/nginx/nginx.conf
     done
 
+    # set http reverse proxy settings.
+    http_reverse_proxy_settings=(
+        'proxy_set_header Host $host;'
+	    'proxy_set_header X-Real-IP $remote_addr;'
+	    'proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;'
+	    # NOTE: the cases of error, timeout and invalid_header are always considered
+	    # unsuccessful attempts even if they are not specified in the directive.
+	    # normally, requests with a non-idempotent method (POST, LOCK, PATCH) are not
+	    # passed to the next server if a request has been sent to an upstream server.
+	    'proxy_next_upstream error timeout invalid_header http_500 non_idempotent;'
+	    # nginx will return error if total time of retries exceed 20s.
+	    'proxy_next_upstream_timeout 20s;'
+	    'proxy_next_upstream_tries 0;'
+	    # timeout for establishing a connection with a proxied server.
+	    'proxy_connect_timeout 5s;'
+	    # timeout for transmitting a request to the proxied server.
+	    'proxy_send_timeout 5s;'
+	    # timeout for reading a response from the proxied server
+	    # NOTE: this should not be set too small.
+	    'proxy_read_timeout 600s;'
+	    'proxy_request_buffering on;'
+        'client_max_body_size 1024m;'
+    )
+
+    for setting in "${http_reverse_proxy_settings[@]}"; do
+        sed -i -r \
+            -e "/__HTTP_REVERSE_PROXY_SETTINGS__/i\            ${setting}" \
+            /etc/nginx/nginx.conf
+    done
+
     # delete all the placeholders finally or nginx.conf will be invalid.
-    sed -r -i \
+    sed -i -r \
         -e '/__KUBE_SECURE_SERVERS__/d' \
         -e '/__REVERSE_PROXY_ALGORITHM__/d' \
         -e '/__STREAM_REVERSE_PROXY_SETTINGS__/d' \
+        -e '/__HTTP_REVERSE_PROXY_SETTINGS__/d' \
+        -e '/__KUBE_HEKETI__/d' \
         /etc/nginx/nginx.conf
 
     util::start_and_enable nginx.service

@@ -7,20 +7,20 @@ if [[ "${#BASH_SOURCE[@]}" -ne 0 ]]; then
     source "${__KUBE_KIT_DIR__}/library/logging.sh"
 fi
 
-readonly NUM_0_TO_255_REGEX="([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])"
-readonly NUM_1_TO_32_REGEX="([1-9]|[1-2][0-9]|3[0-2])"
-readonly NUM_16_TO_31_REGEX="(1[6-9]|2[0-9]|3[0-1])"
-readonly NUM_16_TO_32_REGEX="(1[6-9]|2[0-9]|3[0-2])"
-readonly NUM_0_TO_65535_REGEX="(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{1,3}|[0-9])"
+NUM_0_TO_255_REGEX="([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])"
+NUM_1_TO_32_REGEX="([1-9]|[1-2][0-9]|3[0-2])"
+NUM_16_TO_31_REGEX="(1[6-9]|2[0-9]|3[0-1])"
+NUM_16_TO_32_REGEX="(1[6-9]|2[0-9]|3[0-2])"
+NUM_0_TO_65535_REGEX="(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{1,3}|[0-9])"
 
 # The complete regex which valid a IPV4 address:
 # ^((([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))$
-readonly IPV4_REGEX="((${NUM_0_TO_255_REGEX}\.){3}${NUM_0_TO_255_REGEX})"
-readonly IPV4_CIDR_REGEX="(${IPV4_REGEX}\/${NUM_1_TO_32_REGEX})"
-readonly IPV4_PORT_REGEX="(${IPV4_REGEX}:${NUM_0_TO_65535_REGEX})"
-readonly PRIVATE_IPV4_REGEX="((10|127)(\.${NUM_0_TO_255_REGEX}){3}|(172\.${NUM_16_TO_31_REGEX}|192\.168)(\.${NUM_0_TO_255_REGEX}){2})"
-readonly PRIVATE_IPV4_CIDR_REGEX="(${PRIVATE_IPV4_REGEX}\/${NUM_16_TO_32_REGEX})"
-readonly PRIVATE_IPV4_PORT_REGEX="(${PRIVATE_IPV4_REGEX}:${NUM_0_TO_65535_REGEX})"
+IPV4_REGEX="((${NUM_0_TO_255_REGEX}\.){3}${NUM_0_TO_255_REGEX})"
+IPV4_CIDR_REGEX="(${IPV4_REGEX}\/${NUM_1_TO_32_REGEX})"
+IPV4_PORT_REGEX="(${IPV4_REGEX}:${NUM_0_TO_65535_REGEX})"
+PRIVATE_IPV4_REGEX="((10|127)(\.${NUM_0_TO_255_REGEX}){3}|(172\.${NUM_16_TO_31_REGEX}|192\.168)(\.${NUM_0_TO_255_REGEX}){2})"
+PRIVATE_IPV4_CIDR_REGEX="(${PRIVATE_IPV4_REGEX}\/${NUM_16_TO_32_REGEX})"
+PRIVATE_IPV4_PORT_REGEX="(${PRIVATE_IPV4_REGEX}:${NUM_0_TO_65535_REGEX})"
 
 
 # ipv4::cidr_prefix_to_netmask 20 => 255.255.240.0

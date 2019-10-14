@@ -61,11 +61,10 @@ function remove_pv() {
     current_ip="$(util::current_host_ip)"
 
     LOG info "There exists a pv ${pv} in the device ${device} on ${current_ip}!"
-    # NOTE: the condition `if(NF==7)` is necessary when the pv has no vgs.
     # can not use `vgs -o +devices | grep "${pv}" | awk '{print $1}' | uniq`
     # because `vgs -o +devices` can not list the vg and the pv of glusterfs.
-    # the devices of glusterfs' vg is none or tp_xxx, NOT the pv's name!
-    for vg in $(pvs -o +devices | grep "${pv}" | awk '{if(NF==7) print $2}' | uniq); do
+    # the devices of glusterfs' vg is none or tp_xxx NOT the pv's name.
+    for vg in $(pvs -o +devices | grep "${pv}" | awk '{print $2}' | uniq); do
         remove_vg "${device}" "${pv}" "${vg}"
     done
 
@@ -110,8 +109,8 @@ function get_block_label() {
 
 
 function wipe_device() {
+    local device="${1}"
     current_ip="$(util::current_host_ip)"
-    device="${KUBE_DISKS_ARRAY[${current_ip}]}"
 
     # install some packages to deal with disk partitions if necessary.
     for pkg in device-mapper-persistent-data lvm2 parted; do

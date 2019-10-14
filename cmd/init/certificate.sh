@@ -233,8 +233,6 @@ local::execute_parallel -h all -f distribute_certs -p 5
 ######## Generate the kubelet client certificate for each node #######
 ######################################################################
 
-for node_ip in "${KUBE_NODE_IPS_ARRAY[@]}"; do
-    ssh::execute -h "${node_ip}" \
-                 -s "${functions_file}" \
-                 -- "generate_certs_for_kubelet"
-done
+ssh::execute_parallel -h "node" \
+                      -s "${functions_file}" \
+                      -- "generate_certs_for_kubelet"

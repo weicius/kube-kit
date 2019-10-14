@@ -34,13 +34,22 @@ if [[ "${ENABLE_GLUSTERFS,,}" == "true" ]]; then
     # HEKETI_NODE_IPS_ARRAY is an array to keep all heketi node ips.
     declare -a HEKETI_NODE_IPS_ARRAY=(${!HEKETI_DISKS_ARRAY[@]})
 
+    # NOTE: heketi_node_ip is in the kubernetes cluster subnet.
+    for heketi_node_ip in "${HEKETI_NODE_IPS_ARRAY[@]}"; do
+        if ! util::element_in_array "${heketi_node_ip}" "${KUBE_ALL_IPS_ARRAY[@]}"; then
+            LOG error "The ipv4 address ${heketi_node_ip} for heketi is NOT in" \
+                      "the kubernetes subnet ${KUBE_KIT_SUBNET}!"
+            exit 143
+        fi
+    done
+
     heketi_nodes_num="${#HEKETI_DISKS_ARRAY[@]}"
     # for most situations, set the replicas of glusterfs volume to 3 is OK.
     GLUSTERFS_REPLICAS=3
 
     if [[ "${heketi_nodes_num}" -lt 2 ]]; then
         LOG error "You must offer at least 2 nodes for glusterfs cluster!"
-        exit 143
+        exit 144
     elif [[ "${heketi_nodes_num}" -eq 2 ]]; then
         GLUSTERFS_REPLICAS=2
     fi
@@ -54,10 +63,10 @@ if [[ "${ENABLE_GLUSTERFS,,}" == "true" ]]; then
         if [[ ! ("${GLUSTERFS_NETWORK_GATEWAY}" =~ ^${IPV4_REGEX}$) ]]; then
             LOG error "GLUSTERFS_NETWORK_GATEWAY is configurated, but" \
                       "${GLUSTERFS_NETWORK_GATEWAY} is NOT a valid ipv4 address! "
-            exit 144
+            exit 145
         elif util::element_in_array "${GLUSTERFS_NETWORK_GATEWAY}" "${KUBE_ALL_IPS_ARRAY[@]}"; then
             LOG error "GLUSTERFS_NETWORK_GATEWAY should NOT be within kubernetes cluster!"
-            exit 145
+            exit 146
         fi
     fi
 fi

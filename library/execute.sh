@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # vim: nu:noai:ts=4
-# shellcheck shell=bash disable=SC1090,SC2034,SC2206,SC2207
+# shellcheck shell=bash disable=SC1090,SC2034,SC2044,SC2206,SC2207
 
 if [[ "${#BASH_SOURCE[@]}" -ne 0 ]]; then
     __KUBE_KIT_DIR__=$(dirname "$(cd "$(dirname ${BASH_SOURCE[0]})" && pwd)")
@@ -38,8 +38,14 @@ function ssh::execute() {
     if [[ -n "${__KUBE_KIT_DIR__}" ]]; then
         # pass the library scripts to remote servers to enable your own function
         # to call any function which is defined in these scripts by default ONLY
-        # when calling ssh::execute on current machine, NOT on remote hosts.
-        scripts+=(${__KUBE_KIT_DIR__}/library/{logging,ipv4,util,usage,execute}.sh)
+        # when calling `ssh::execute` on current machine, NOT on remote hosts.
+        # if this function is executed on a remote host, we'll get the function
+        # definations using `util::get_global_envs`.
+        for script in $(find "${__KUBE_KIT_DIR__}/library" -name '*.sh'); do
+            # NOTE: these scripts don't need to passed to remote hosts.
+            [[ "${script}" =~ (main|command|partition|ready) ]] && continue
+            scripts+=("${script}")
+        done
     fi
 
     while true; do
@@ -60,18 +66,18 @@ function ssh::execute() {
                 if [[ -z "${2}" || "${2}" =~ ^--? ]]; then
                     LOG error "'-s|--script' requires an argument!"
                     usage::ssh::execute 103
-                elif [[ -f "${2}" && -x "${2}" ]]; then
-                    if ! util::file_ends_with_newline "${2}"; then
-                        LOG error "The script '${2}' ends with NO nowline!"
-                        usage::ssh::execute 104
-                    fi
-                    # TODO: check if the script contains ONLY definitions
-                    # of functions, and does NOT execute normal commands.
+                elif ! [[ -f "${2}" ]]; then
+                    LOG error "The script <${2}> doesn't exist!"
+                    usage::ssh::execute 104
+                elif ! util::file_ends_with_newline "${2}"; then
+                    LOG error "The script <${2}> ends with NO nowline!"
+                    usage::ssh::execute 105
+                elif ! util::file_is_library_script "${2}"; then
+                    LOG error "The script <${2}> isn't a library script!"
+                    usage::ssh::execute 106
+                else
                     scripts+=("${2}")
                     shift 2
-                else
-                    LOG error "'${2}' is NOT a local executable file!"
-                    usage::ssh::execute 105
                 fi
                 ;;
             -t|--timeout)
@@ -83,7 +89,7 @@ function ssh::execute() {
                     shift 2
                 else
                     LOG error "<${2}> is NOT a valid argument of '-t|--timeout'!"
-                    usage::ssh::execute 106
+                    usage::ssh::execute 107
                 fi
                 ;;
             -q|--quiet)
@@ -107,10 +113,10 @@ function ssh::execute() {
 
     if [[ -z "${host}" ]]; then
         LOG error "'-h|--host' is required!"
-        usage::ssh::execute 107
+        usage::ssh::execute 108
     elif [[ -z "${*}" ]]; then
         LOG error "Your func_name or raw command is empty!"
-        usage::ssh::execute 108
+        usage::ssh::execute 109
     fi
 
     # scripts=($(util::sort_uniq_array "${scripts[@]}"))
@@ -156,7 +162,7 @@ function ssh::execute() {
         sshpass -p "${KUBE_CIPHERS_ARRAY[${host}]}" \
             ssh "root@${host}" "${OPENSSH_OPTIONS[@]}" -p "${SSHD_PORT}" -qt \
                 bash -s < <(cat <(util::get_global_envs) "${scripts[@]}") \
-                -- "${@}" "${redirection_option}" | tee /dev/null
+                     -- "${@}" "${redirection_option}" | tee /dev/null
 
     # use `commands | tee /dev/null` to ensure the whole pipe above never fail!
     # and then we can use 'exit_code' to keep the exit_code of remote commands.
@@ -236,16 +242,18 @@ function ssh::execute_parallel() {
                 if [[ -z "${2}" || "${2}" =~ ^--? ]]; then
                     LOG error "'-s|--script' requires an argument!"
                     usage::ssh::execute_parallel 112
-                elif [[ -f "${2}" && -x "${2}" ]]; then
-                    if ! util::file_ends_with_newline "${2}"; then
-                        LOG error "The script '${2}' ends with NO nowline!"
-                        usage::ssh::execute_parallel 113
-                    fi
+                elif ! [[ -f "${2}" ]]; then
+                    LOG error "The script <${2}> doesn't exist!"
+                    usage::ssh::execute_parallel 113
+                elif ! util::file_ends_with_newline "${2}"; then
+                    LOG error "The script <${2}> ends with NO nowline!"
+                    usage::ssh::execute_parallel 114
+                elif ! util::file_is_library_script "${2}"; then
+                    LOG error "The script <${2}> isn't a library script!"
+                    usage::ssh::execute_parallel 115
+                else
                     ssh_execute_options+=("-s" "${2}")
                     shift 2
-                else
-                    LOG error "'${2}' is NOT a local executable file!"
-                    usage::ssh::execute_parallel 114
                 fi
                 ;;
             -p|--parallel)
@@ -266,7 +274,7 @@ function ssh::execute_parallel() {
                     shift 2
                 else
                     LOG error "<${2}> is an invalid argument of '-p|--parallel'!"
-                    usage::ssh::execute_parallel 115
+                    usage::ssh::execute_parallel 116
                 fi
                 ;;
             -t|--timeout)
@@ -278,7 +286,7 @@ function ssh::execute_parallel() {
                     shift 2
                 else
                     LOG error "<${2}> is NOT a valid argument of '-t|--timeout'!"
-                    usage::ssh::execute_parallel 116
+                    usage::ssh::execute_parallel 117
                 fi
                 ;;
             -q|--quiet)
@@ -300,13 +308,13 @@ function ssh::execute_parallel() {
 
     if [[ "${#hosts[@]}" -eq 0 ]]; then
         LOG error "'-h|--hosts' is required!"
-        usage::ssh::execute_parallel 117
+        usage::ssh::execute_parallel 118
     fi
 
     for host in "${hosts[@]}"; do
         [[ "${host}" =~ ^${IPV4_REGEX}$ ]] && continue
         LOG error "'${host}' is NOT a valid ipv4 address!"
-        usage::ssh::execute_parallel 118
+        usage::ssh::execute_parallel 119
     done
 
     # NOTE: need to remove the duplicated hosts to
@@ -315,7 +323,7 @@ function ssh::execute_parallel() {
 
     if [[ -z "${*}" ]]; then
         LOG error "Your func_name or raw command is empty!"
-        usage::ssh::execute_parallel 119
+        usage::ssh::execute_parallel 120
     fi
 
     # prepare the temporary directory to store exit_codes.

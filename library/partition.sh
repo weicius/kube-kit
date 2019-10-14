@@ -84,9 +84,9 @@ function disk::partition() {
     for host in "${hosts[@]}"; do
         ssh::execute -h "${host}" \
                      -s "${functions_file}" \
-                     -- wipe_device
+                     -- "wipe_device" "${KUBE_DISKS_ARRAY[${host}]}"
         ssh::execute -h "${host}" \
                      -s "${functions_file}" \
-                     -- do_partition "${@:3}"
+                     -- "do_partition" "${@:3}"
     done
 }

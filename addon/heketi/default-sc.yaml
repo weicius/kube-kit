@@ -1,0 +1,16 @@
+# https://kubernetes.io/docs/concepts/storage/storage-classes/#glusterfs
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: "__GLUSTERFS_DEFAULT_SC__"
+provisioner: kubernetes.io/glusterfs
+reclaimPolicy: Delete
+parameters:
+  resturl: "__HEKETI_SERVER__"
+  # heketi-cli cluster list | grep -oP '(?<=^Id:)[0-9a-f]+'
+  clusterid: "__CLUSTER_ID__"
+  volumetype: "__GLUSTERFS_VOLUME_TYPE__"
+  # restauthenabled: "true"
+  # restuser: "admin"
+  # secretName: "heketi-secret"
+  # secretNamespace: "kube-system"

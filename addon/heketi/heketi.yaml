@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heketi
+  namespace: kube-system
+  labels:
+    k8s-app: heketi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: heketi
+  template:
+    metadata:
+      labels:
+        k8s-app: heketi
+    spec:
+      containers:
+      - image: __HEKETI_IMAGE__
+        imagePullPolicy: IfNotPresent
+        name: heketi
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: ssh-rsa
+          mountPath: "/root/.ssh"
+          readOnly: true
+        - name: heketi-config
+          mountPath: "/etc/heketi"
+          readOnly: false
+        - name: heketi-db
+          mountPath: "/var/lib/heketi"
+          readOnly: false
+        - name: heketi-backup
+          mountPath: "/backupdb"
+          readOnly: false
+        readinessProbe:
+          timeoutSeconds: 3
+          initialDelaySeconds: 10
+          httpGet:
+            path: "/hello"
+            port: 8080
+        livenessProbe:
+          timeoutSeconds: 3
+          initialDelaySeconds: 10
+          httpGet:
+            path: "/hello"
+            port: 8080
+      volumes:
+      - name: ssh-rsa
+        hostPath:
+          path: "/root/.ssh"
+      - name: heketi-config
+        hostPath:
+          path: "__KUBE_SHARED_VOLUME_MNT_DIR__/heketi/config"
+      - name: heketi-db
+        hostPath:
+          path: "__KUBE_SHARED_VOLUME_MNT_DIR__/heketi/db"
+      - name: heketi-backup
+        hostPath:
+          path: "__KUBE_SHARED_VOLUME_MNT_DIR__/heketi/backup"
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: heketi
+  namespace: kube-system
+  labels:
+    k8s-app: heketi
+spec:
+  type: NodePort
+  selector:
+    k8s-app: heketi
+  ports:
+  - name: heketi
+    port: 8080
+    targetPort: 8080
+    nodePort: __KUBE_HEKETI_PORT__

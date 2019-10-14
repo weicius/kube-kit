@@ -111,10 +111,13 @@ function util::calling_stacks() {
 # array which are defined by kube-kit (actually defined in etc/*.sh or parser/*.sh)
 # whose name start with any prefix configurated in etc/env.prefix
 function util::get_global_envs() {
-    env_prefix_file="${__KUBE_KIT_DIR__}/etc/env.prefix"
-    env_prefix_regex=$(grep -oP '^[A-Z]+' "${env_prefix_file}" | paste -sd '|')
-    declare_env_prefix="^declare [-aAi]+ (${env_prefix_regex})[A-Z_]*="
+    declare_env_prefix="^declare [-aAi]+ (${KUBE_ENV_PREFIX_REGEX})[A-Z0-9_]*="
     declare -p | grep -P "${declare_env_prefix}" | tee "${KUBE_KIT_ENV_FILE}"
+    # NOTE: if this function is executed on a remote host, it also returns the
+    # definitions of all the library functions (defined in library/*.sh)
+    if [[ -z "${__KUBE_KIT_DIR__}" ]]; then
+        declare -f | sed -nr "/^(${KUBE_LIB_FUNCTION_REGEX}) \(\)/,/^\}$/p"
+    fi
 }
 
 
@@ -171,6 +174,13 @@ function util::random_string() {
 
 function util::file_ends_with_newline() {
     [[ $(tail -c 1 "${1}" | wc -l) -gt 0 ]]
+}
+
+
+# library script means this file contains only function/variable definitions
+function util::file_is_library_script() {
+    # NOTE: KUBE_FUNCTION_DEF_REGEX is defined in parser/init.sh
+    ! sed -r "/${KUBE_FUNCTION_DEF_REGEX}/,/^\}$/d" "${1}" | grep -vPq '^($|\s*(#|[a-zA-Z0-9_]+=).*)'
 }
 
 
@@ -454,4 +464,13 @@ function util::get_gpu_details() {
 function util::get_glusterfs_node_name() {
     peer_nodes="($(gluster peer status |& grep -oP '(?<=^Hostname: ).*' | paste -sd '|'))"
     awk "/${GLUSTERFS_NODE_NAME_PREFIX}/{print \$2}" /etc/hosts | grep -vP "${peer_nodes}"
+}
+
+
+function util::get_glusterfs_node_ip() {
+    if [[ -n "${GLUSTERFS_NETWORK_GATEWAY}" ]]; then
+        util::get_ipaddr_can_ping_gateway "${GLUSTERFS_NETWORK_GATEWAY}"
+    else
+        util::current_host_ip
+    fi
 }

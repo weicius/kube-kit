@@ -150,14 +150,8 @@ function ready::all_nodes() {
 }
 
 
-function ready::coredns() {
-    if ! kubectl --namespace kube-system get deployment coredns &>/dev/null; then
-        LOG error "You have NOT deployed coredns, please execute './kube-kit deploy coredns' first!"
-        return 1
-    elif ! kubectl --namespace kube-system get pods | grep -qE '^coredns[a-z0-9-]+\s+1/1\s+Running'; then
-        LOG error "kubends is NOT in ready status!"
-        return 2
-    fi
+function ready::heketi() {
+    curl "${HEKETI_SERVER}/hello" &>/dev/null
 }
 
 

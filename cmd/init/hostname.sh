@@ -51,8 +51,7 @@ if [[ "${ENABLE_GLUSTERFS}" == "true" ]]; then
         # get the ip address on the host to access GLUSTERFS_NETWORK_GATEWAY.
         if [[ -n "${GLUSTERFS_NETWORK_GATEWAY}" ]]; then
             glusterfs_node_ip=$(ssh::execute -h "${k8s_node_ip}" \
-                                             -- "util::get_ipaddr_can_ping_gateway" \
-                                                "${GLUSTERFS_NETWORK_GATEWAY}")
+                                             -- "util::get_glusterfs_node_ip")
             if [[ -z "${glusterfs_node_ip}" ]]; then
                 LOG error "Failed to get the ip address on host ${k8s_node_ip}" \
                           "to access ${GLUSTERFS_NETWORK_GATEWAY}!"

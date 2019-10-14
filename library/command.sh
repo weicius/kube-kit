@@ -58,6 +58,7 @@ function _get_deploy_all_options() {
         [[ "${option}" =~ ^(heapster|dashboard|all)$ ]] && continue
         [[ "${ENABLE_CNI_PLUGIN}" == "true" && "${option}" == "flannel" ]] && continue
         [[ "${ENABLE_CNI_PLUGIN}" == "false" && "${option}" == "calico" ]] && continue
+        [[ "${ENABLE_GLUSTERFS}" == "false" && "${option}" == "heketi" ]] && continue
         deploy_options+=(${option})
     done
 
@@ -107,7 +108,7 @@ function cmd::init() {
             ;;
         glusterfs)
             if [[ "${ENABLE_GLUSTERFS,,}" != "true" ]]; then
-                LOG warn "You choose NOT to use glusterfs as storage, exit ..."
+                LOG warn "You have disabled glusterfs for kubernetes storage, just exit ..."
                 return 2
             fi
             LOG info "Initializing the glusterfs cluster for kubernetes cluster ..."
@@ -177,10 +178,6 @@ function cmd::deploy() {
             fi
             ;;
         proxy)
-            if [[ "${KUBE_MASTER_IPS_ARRAY_LEN}" -eq 1 ]]; then
-                LOG warn "There is only one master, don't need to deploy proxy!"
-                return 0
-            fi
             LOG info "Deploying the reverse-proxy for all the exposed services ..."
             source "${__KUBE_KIT_DIR__}/cmd/deploy/proxy.sh"
             ;;
@@ -214,6 +211,10 @@ function cmd::deploy() {
             source "${__KUBE_KIT_DIR__}/cmd/deploy/coredns.sh"
             ;;
         heketi)
+            if [[ "${ENABLE_GLUSTERFS,,}" != "true" ]]; then
+                LOG warn "You have disabled glusterfs for kubernetes storage, just exit ..."
+                return 1
+            fi
             LOG info "Deploying the Heketi service to manage glusterfs cluster automatically ..."
             source "${__KUBE_KIT_DIR__}/cmd/deploy/heketi.sh"
             ;;
@@ -230,7 +231,6 @@ function cmd::deploy() {
             source "${__KUBE_KIT_DIR__}/cmd/deploy/prometheus.sh"
             ;;
         heapster)
-            coredns_ready || return 1
             LOG info "Deploying the Heapster addon for kubernetes cluster ..."
             source "${__KUBE_KIT_DIR__}/cmd/deploy/heapster.sh"
             ;;
