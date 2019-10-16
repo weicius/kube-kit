@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: harbor-system
+  labels:
+    k8s-app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: redis
+  template:
+    metadata:
+      labels:
+        k8s-app: redis
+    spec:
+      containers:
+      - name: redis
+        image: vmware/harbor-redis:__HARBOR_VERSION__
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+        - name: harbor-storage
+          subPath: redis
+          mountPath: /data
+      volumes:
+      - name: harbor-storage
+        persistentVolumeClaim:
+          claimName: harbor-storage
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: harbor-system
+spec:
+  selector:
+    k8s-app: redis
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379

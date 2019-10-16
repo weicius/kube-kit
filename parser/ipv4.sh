@@ -189,5 +189,16 @@ KUBE_SECURE_APISERVER="https://${KUBE_MASTER_VIP}:${KUBE_VIP_SECURE_PORT}"
 KUBE_SECURE_API_ALLOWED_ALL_IPS_ARRAY=($(util::sort_uniq_array "${KUBE_MASTER_VIP}" "${KUBE_ALL_IPS_ARRAY[@]}"))
 
 HARBOR_HOST="${KUBE_MASTER_VIP}"
-HARBOR_REGISTRY="${HARBOR_HOST}:${KUBE_VIP_HARBOR_PORT}"
-sed -i -r "s|^(HARBOR_REGISTRY).*|\1=\"${HARBOR_REGISTRY}\"|" "${__KUBE_KIT_DIR__}/etc/kube-kit.env"
+HARBOR_REGISTRY="${HARBOR_HOST}:${KUBE_HARBOR_PORT}"
+HARBOR_CLI=$(cat <<-EOF | sed -r 's/\s+/ /g'
+	docker run --rm \
+	           -e HARBOR_USERNAME=admin \
+	           -e HARBOR_PASSWORD=${HARBOR_ADMIN_PASSWORD} \
+	           -e HARBOR_PROJECT=1 \
+	           -e HARBOR_URL=${HARBOR_REGISTRY} \
+	           vmware/harbor-cli:${HARBOR_VERSION} \
+	           harbor
+	EOF
+)
+
+sed -i -r "s|^(HARBOR_REGISTRY).*|\1=\"${HARBOR_REGISTRY}\"|" "${__KUBE_KIT_DIR__}/etc/image.env"

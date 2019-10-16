@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui
+  namespace: harbor-system
+  labels:
+    k8s-app: ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: ui
+  template:
+    metadata:
+      labels:
+        k8s-app: ui
+    spec:
+      containers:
+      - name: ui
+        image: vmware/harbor-ui:__HARBOR_VERSION__
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: CONFIG_PATH
+          value: "/etc/ui/app.conf"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: GODEBUG
+          value: "netdns=cgo"
+        - name: UI_SECRET
+          value: "__HARBOR_UI_SECRET__"
+        - name: JOBSERVICE_SECRET
+          value: "__JOBSERVICE_SECRET__"
+        - name: ADMINSERVER_URL
+          value: "http://adminserver:8080"
+        - name: _REDIS_URL
+          value: "redis:6379"
+        - name: UAA_CA_ROOT
+          value: "/etc/ui/certificates/uaa_ca.pem"
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: shared-secret-key
+          mountPath: "/etc/ui/key"
+        - name: ui-config
+          mountPath: "/etc/ui"
+      volumes:
+      - name: shared-secret-key
+        hostPath:
+          path: "__HARBOR_CONFIG_DIR__/key"
+      - name: ui-config
+        hostPath:
+          path: "__HARBOR_CONFIG_DIR__/ui"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui
+  namespace: harbor-system
+spec:
+  selector:
+    k8s-app: ui
+  ports:
+  - name: ui
+    port: 8080
+    targetPort: 8080

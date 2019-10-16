@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobservice
+  namespace: harbor-system
+  labels:
+    k8s-app: jobservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: jobservice
+  template:
+    metadata:
+      labels:
+        k8s-app: jobservice
+    spec:
+      containers:
+      - name: jobservice
+        image: vmware/harbor-jobservice:__HARBOR_VERSION__
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: UI_SECRET
+          value: "__HARBOR_UI_SECRET__"
+        - name: JOBSERVICE_SECRET
+          value: "__JOBSERVICE_SECRET__"
+        - name: ADMINSERVER_URL
+          value: "http://adminserver:8080"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: GODEBUG
+          value: "netdns=cgo"
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: jobservice-config
+          # adminserver MUST use the name
+          # /etc/jobservice/config.yml
+          mountPath: "/etc/jobservice/config.yml"
+        - name: harbor-storage
+          subPath: jobservice
+          mountPath: "/var/log/jobs"
+      volumes:
+      - name: jobservice-config
+        hostPath:
+          path: "__HARBOR_CONFIG_DIR__/jobservice/config.yaml"
+      - name: harbor-storage
+        persistentVolumeClaim:
+          claimName: harbor-storage
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jobservice
+  namespace: harbor-system
+spec:
+  selector:
+    k8s-app: jobservice
+  ports:
+  - name: jobservice
+    port: 8080
+    targetPort: 8080

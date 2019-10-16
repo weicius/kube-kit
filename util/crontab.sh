@@ -125,13 +125,13 @@ function keep_node_services_active() {
 function auto_mount_heketi_bricks() {
     [[ -f /etc/heketi/fstab ]] || return 0
     grep -q heketi /etc/heketi/fstab || return 0
-    df -hT | grep -q /var/lib/heketi || return 0
+    df -hT | grep -q /var/lib/heketi && return 0
 
     LOG info "Auto-mount all bricks of heketi onboot!"
     mount --all --fstab /etc/heketi/fstab
 
     status_regex="[0-9a-f]+/brick\s+N/A\s+N/A\s+N\s+N/A"
-    for idx in $(seq 10); do
+    for idx in $(seq 5); do
         if ! systemctl is-active glusterd.service -q; then
             systemctl restart glusterd.service
             sleep "$((2 ** (idx -1)))"

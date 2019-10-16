@@ -155,17 +155,16 @@ function ready::heketi() {
 }
 
 
-function ready::heapster() {
-    for deployment in heapster influxdb-grafana; do
-        if ! kubectl --namespace kube-system get deployment ${deployment} &>/dev/null; then
-            LOG error "You have NOT deployed heapster, please execute './kube-kit deploy heapster' first!"
-            return 1
-        fi
+function ready::harbor_ui() {
+    ui_pod=$(kubectl --namespace=harbor-system get pods \
+                     --selector=k8s-app=ui 2>/dev/null |\
+                     grep -oP '^ui-\S+')
+    kubectl --namespace=harbor-system logs "${ui_pod}" 2>/dev/null |\
+            grep -q "http server Running on http://:8080"
+}
 
-        [[ ${deployment} == heapster ]] && pod_num='4/4' || pod_num='2/2'
-        if ! kubectl --namespace kube-system get pods | grep -qE "^${deployment}[a-z0-9-]+\s+${pod_num}\s+Running"; then
-            LOG error "${deployment} is NOT in ready status!"
-            return 2
-        fi
-    done
+
+function ready::docker_login_harbor() {
+    docker login -u admin -p "${HARBOR_ADMIN_PASSWORD}" \
+           "${HARBOR_REGISTRY}" 2>/dev/null
 }

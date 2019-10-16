@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: harbor-system
+  labels:
+    k8s-app: db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: db
+  template:
+    metadata:
+      labels:
+        k8s-app: db
+    spec:
+      containers:
+      - name: db
+        image: vmware/harbor-db:__HARBOR_VERSION__
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "__HARBOR_MYSQL_ROOT_PASSWORD__"
+        volumeMounts:
+        - name: harbor-storage
+          subPath: db
+          mountPath: "/var/lib/mysql"
+      volumes:
+      - name: harbor-storage
+        persistentVolumeClaim:
+          claimName: harbor-storage
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: harbor-system
+spec:
+  selector:
+    k8s-app: db
+  ports:
+  - name: db
+    port: 3306
+    targetPort: 3306

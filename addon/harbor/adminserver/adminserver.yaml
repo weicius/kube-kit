@@ -1,0 +1,177 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adminserver
+  namespace: harbor-system
+  labels:
+    k8s-app: adminserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: adminserver
+  template:
+    metadata:
+      labels:
+        k8s-app: adminserver
+    spec:
+      containers:
+      - name: adminserver
+        image: vmware/harbor-adminserver:__HARBOR_VERSION__
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PORT
+          value: "8080"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: EXT_ENDPOINT
+          value: "http://__HARBOR_HOST__"
+        - name: AUTH_MODE
+          value: "db_auth"
+        - name: SELF_REGISTRATION
+          value: "on"
+        - name: LDAP_URL
+          value: "ldaps://ldap.mydomain.com"
+        - name: LDAP_SEARCH_DN
+          value: ""
+        - name: LDAP_SEARCH_PWD
+          value: ""
+        - name: LDAP_BASE_DN
+          value: "ou=people,dc=mydomain,dc=com"
+        - name: LDAP_FILTER
+          value: ""
+        - name: LDAP_UID
+          value: "uid"
+        - name: LDAP_SCOPE
+          value: "2"
+        - name: LDAP_TIMEOUT
+          value: "5"
+        - name: LDAP_VERIFY_CERT
+          value: "true"
+        - name: LDAP_GROUP_BASEDN
+          value: "ou=group,dc=mydomain,dc=com"
+        - name: LDAP_GROUP_FILTER
+          value: "objectclass=group"
+        - name: LDAP_GROUP_GID
+          value: "on"
+        - name: LDAP_GROUP_SCOPE
+          value: "2"
+        - name: DATABASE_TYPE
+          value: "mysql"
+        - name: MYSQL_HOST
+          value: "db"
+        - name: MYSQL_PORT
+          value: "3306"
+        - name: MYSQL_USR
+          value: "root"
+        - name: MYSQL_PWD
+          value: "__HARBOR_MYSQL_ROOT_PASSWORD__"
+        - name: MYSQL_DATABASE
+          value: "registry"
+        - name: REGISTRY_URL
+          value: "http://registry:5000"
+        - name: TOKEN_SERVICE_URL
+          value: "http://ui:8080/service/token"
+        - name: EMAIL_HOST
+          value: "smtp.mydomain.com"
+        - name: EMAIL_PORT
+          value: "25"
+        - name: EMAIL_USR
+          value: "sample_admin@mydomain.com"
+        - name: EMAIL_PWD
+          value: "abc"
+        - name: EMAIL_SSL
+          value: "false"
+        - name: EMAIL_FROM
+          value: "admin <sample_admin@mydomain.com>"
+        - name: EMAIL_IDENTITY
+          value: ""
+        - name: EMAIL_INSECURE
+          value: "false"
+        - name: HARBOR_ADMIN_PASSWORD
+          value: "__HARBOR_ADMIN_PASSWORD__"
+        - name: PROJECT_CREATION_RESTRICTION
+          value: "everyone"
+        - name: MAX_JOB_WORKERS
+          value: "50"
+        - name: UI_SECRET
+          value: "__HARBOR_UI_SECRET__"
+        - name: JOBSERVICE_SECRET
+          value: "__JOBSERVICE_SECRET__"
+        - name: TOKEN_EXPIRATION
+          value: "30"
+        - name: CFG_EXPIRATION
+          value: "5"
+        - name: GODEBUG
+          value: "netdns=cgo"
+        - name: ADMIRAL_URL
+          value: "NA"
+        - name: WITH_NOTARY
+          value: "False"
+        - name: CLAIR_DB_PASSWORD
+          value: "password"
+        - name: CLAIR_DB_HOST
+          value: "postgres"
+        - name: CLAIR_DB_PORT
+          value: "5432"
+        - name: CLAIR_DB_USERNAME
+          value: "postgres"
+        - name: CLAIR_DB
+          value: "postgres"
+        - name: RESET
+          value: "false"
+        - name: UAA_ENDPOINT
+          value: "uaa.mydomain.org"
+        - name: UAA_CLIENTID
+          value: "id"
+        - name: UAA_CLIENTSECRET
+          value: "secret"
+        - name: UAA_VERIFY_CERT
+          value: "true"
+        - name: UI_URL
+          value: "http://ui:8080"
+        - name: JOBSERVICE_URL
+          value: "http://jobservice:8080"
+        - name: CLAIR_URL
+          value: "http://clair:6060"
+        - name: NOTARY_URL
+          value: "http://notary-server:4443"
+        - name: REGISTRY_STORAGE_PROVIDER_NAME
+          value: "filesystem"
+        - name: READ_ONLY
+          value: "false"
+        - name: SKIP_RELOAD_ENV_PATTERN
+          value: "$^"
+        - name: RELOAD_KEY
+          value: ""
+        # Workaround the volume API issue.
+        - name: IMAGE_STORE_PATH
+          value: "/"
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: shared-secret-key
+          mountPath: /etc/adminserver/key
+        - name: harbor-storage
+          mountPath: /data
+      volumes:
+      - name: shared-secret-key
+        hostPath:
+          path: "__HARBOR_CONFIG_DIR__/key"
+      - name: harbor-storage
+        persistentVolumeClaim:
+          claimName: harbor-storage
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adminserver
+  namespace: harbor-system
+spec:
+  selector:
+    k8s-app: adminserver
+  ports:
+  - name: adminserver
+    port: 8080
+    targetPort: 8080

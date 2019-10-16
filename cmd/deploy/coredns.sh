@@ -12,7 +12,6 @@ sed -i -r \
     -e "s|__KUBE_DNS_DOMAIN__|${KUBE_DNS_DOMAIN}|" \
     -e "s|__KUBE_DNS_SVC_IP__|${KUBE_DNS_SVC_IP}|" \
     -e "s|__COREDNS_IMAGE__|${COREDNS_IMAGE}|" \
-    -e "s|__REPLICAS__|${KUBE_MASTER_IPS_ARRAY_LEN}|" \
     "${coredns_manifest_dir}/coredns.yaml"
 
 kubectl delete -f "${coredns_manifest_dir}/coredns.yaml" 2>/dev/null || true

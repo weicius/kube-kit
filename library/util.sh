@@ -260,8 +260,8 @@ function util::current_host_ip() {
         if [[ "${KUBE_MASTER_IPS_ARRAY_LEN}" -gt 1 && \
               "${ip}" == "${KUBE_MASTER_VIP}" ]]; then
             continue
-        elif ipv4::two_ips_in_same_subnet "${ip}" "${KUBE_KIT_HOST_IP}" \
-                                          "${KUBE_KIT_HOST_CIDR}"; then
+        elif ipv4::two_ips_in_same_subnet "${ip}" "${KUBE_KIT_NET_IPADDR}" \
+                                          "${KUBE_KIT_NET_PREFIX}"; then
             echo -n "${ip}"
             return 0
         fi

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: harbor-storage
+  namespace: harbor-system
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: __HARBOR_STORAGE_PVC_SIZE__Gi
+  storageClassName: __GLUSTERFS_DEFAULT_SC__

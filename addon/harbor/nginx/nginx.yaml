@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: harbor-system
+  labels:
+    k8s-app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: nginx
+  template:
+    metadata:
+      labels:
+        k8s-app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: vmware/harbor-nginx:__HARBOR_VERSION__
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: "/etc/nginx/nginx.conf"
+      volumes:
+      - name: nginx-config
+        hostPath:
+          path: "__HARBOR_CONFIG_DIR__/nginx/nginx.conf"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: harbor-system
+spec:
+  selector:
+    k8s-app: nginx
+  type: NodePort
+  ports:
+  - name: nginx
+    port: 80
+    targetPort: 80
+    nodePort: __KUBE_HARBOR_PORT__

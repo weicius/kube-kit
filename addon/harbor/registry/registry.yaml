@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  namespace: harbor-system
+  labels:
+    k8s-app: registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: registry
+  template:
+    metadata:
+      labels:
+        k8s-app: registry
+    spec:
+      containers:
+      - name: registry
+        image: vmware/harbor-registry:__HARBOR_VERSION__
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        - containerPort: 5001
+        env:
+        - name: GODEBUG
+          value: "netdns=cgos"
+        args:
+        - serve
+        - /etc/registry/config.yaml
+        volumeMounts:
+        - name: registry-config
+          mountPath: "/etc/registry"
+        - name: harbor-storage
+          subPath: registry
+          mountPath: "/storage"
+      volumes:
+      - name: registry-config
+        hostPath:
+          path: "__HARBOR_CONFIG_DIR__/registry"
+      - name: harbor-storage
+        persistentVolumeClaim:
+          claimName: harbor-storage
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: harbor-system
+spec:
+  selector:
+    k8s-app: registry
+  ports:
+  - name: repo
+    port: 5000
+    targetPort: 5000
+  - name: debug
+    port: 5001
+    targetPort: 5001
