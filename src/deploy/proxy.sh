@@ -104,6 +104,22 @@ function config_nginx() {
 	               'rt=\$request_time uct=\$upstream_connect_time '
 	               'uht=\$upstream_header_time urt=\$upstream_response_time';
 
+	    ################################################
+	    ## reverse-proxy for nginx-ingress-controller ##
+	    ################################################
+	    upstream nginx-ingress-controller {
+	        __REVERSE_PROXY_ALGORITHM__
+	        __KUBE_NGINX_INGRESS_CONTROLLER__
+	    }
+	    server {
+	        listen ${KUBE_VIP_INGRESS_PORT};
+	        location / {
+	            proxy_pass http://nginx-ingress-controller;
+	            __HTTP_REVERSE_PROXY_SETTINGS__
+	        }
+	        access_log /var/log/nginx/nginx-ingress-controller.log pretty_http_logs __nginx_logs_settings__;
+	    }
+
 	    ##############################
 	    ## reverse-proxy for heketi ##
 	    ##############################
@@ -136,6 +152,7 @@ function config_nginx() {
 
     for node_ip in "${KUBE_NODE_IPS_ARRAY[@]}"; do
         sed -i -r \
+            -e "/__KUBE_NGINX_INGRESS_CONTROLLER__/i\        server ${node_ip}:${KUBE_INGRESS_PORT};" \
             -e "/__KUBE_HEKETI__/i\        server ${node_ip}:${KUBE_HEKETI_PORT};" \
             /etc/nginx/nginx.conf
     done
@@ -198,6 +215,7 @@ function config_nginx() {
         -e '/__REVERSE_PROXY_ALGORITHM__/d' \
         -e '/__STREAM_REVERSE_PROXY_SETTINGS__/d' \
         -e '/__HTTP_REVERSE_PROXY_SETTINGS__/d' \
+        -e '/__KUBE_NGINX_INGRESS_CONTROLLER__/d' \
         -e '/__KUBE_HEKETI__/d' \
         /etc/nginx/nginx.conf
 
