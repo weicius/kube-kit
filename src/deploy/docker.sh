@@ -7,32 +7,24 @@ function install_docker() {
     local docker_pkg="docker-ce-${DOCKER_VERSION}"
     current_ip="$(util::current_host_ip)"
 
-    if [[ -f /usr/bin/docker ]]; then
-        current_docker_version=$(docker --version | grep -oP '[0-9.]+(-ce)?(?=,)')
-        if [[ "${current_docker_version}" != "${DOCKER_VERSION}" ]]; then
-            systemctl stop docker.service
-            yum remove docker-ce -y &>/dev/null
-        elif ! systemctl is-active docker.service --quiet; then
-            yum remove docker-ce -y &>/dev/null
-        else
-            LOG warn "${docker_pkg} on ${current_ip} is active now! Just restarting docker ..."
-        fi
+    rpm -qa | grep -q "${docker_pkg}" && return 0
+    # remove the docker-ce of other versions.
+    if rpm -qa | grep -q docker-ce; then
+        yum remove docker-ce -y &>/dev/null
     fi
 
     if [[ "${ENABLE_LOCAL_YUM_REPO,,}" != "true" ]]; then
-        if [[ ! -f /etc/yum.repos.d/docker-ce.repo ]]; then
-			cat > /etc/yum.repos.d/docker-ce.repo <<-EOF
-			[docker-ce-stable]
-			name=Docker CE Stable Mirror Repository
-			baseurl=${DOCKER_REPO_MIRROR}/docker-ce/linux/centos/7/x86_64/stable
-			enabled=1
-			gpgcheck=1
-			gpgkey=${DOCKER_REPO_MIRROR}/docker-ce/linux/centos/gpg
-			EOF
-        fi
+        cat > /etc/yum.repos.d/docker-ce.repo <<-EOF
+		[docker-ce-stable]
+		name=Docker CE Stable Mirror Repository
+		baseurl=${DOCKER_REPO_MIRROR}/docker-ce/linux/centos/7/x86_64/stable
+		enabled=1
+		gpgcheck=1
+		gpgkey=${DOCKER_REPO_MIRROR}/docker-ce/linux/centos/gpg
+		EOF
     fi
 
-    LOG info "Trying to install ${docker_pkg} on ${current_ip} ..."
+    LOG info "Installing ${docker_pkg} on ${current_ip} ..."
     yum install -y "${docker_pkg}" &>/dev/null
 }
 
@@ -142,95 +134,34 @@ function config_docker() {
 
     sed -i -r 's|EOL|\\|g' "${docker_service}"
 
-    # install nvidia-docker on current host only if it has GPUs.
-    if ! ls /dev/nvidia* &>/dev/null; then
-        LOG debug "There is NO nvidia GPUs on ${current_ip}! skipping ..."
-        util::start_and_enable docker.service
-        return 0
+    # install nvidia-container-runtime only if current host has GPUs.
+    if ls /dev/nvidia* &>/dev/null; then
+        install_nvidia_container_runtime
     fi
 
-    # NOTE: take care of the order of `util::start_and_enable docker` and
-    # `install_nvidia_docker` for nvidia-docker-v1 and nvidia-docker-v2
-    if [[ "${DOCKER_NVIDIA_VERSION}" == "v1" ]]; then
-        util::start_and_enable docker.service
-        install_nvidia_docker
-    else
-        install_nvidia_docker2
-        util::start_and_enable docker.service
-    fi
+    util::start_and_enable docker.service
 }
 
 
-function install_nvidia_docker() {
+# ref: https://github.com/NVIDIA/nvidia-docker#centos-7-docker-ce-rhel-7475-docker-ce-amazon-linux-12
+function install_nvidia_container_runtime() {
     current_ip="$(util::current_host_ip)"
 
-    if ! rpm -qa | grep -q nvidia-docker; then
-        LOG debug "Installing nvidia-docker on ${current_ip} ..."
-        if [[ "${ENABLE_LOCAL_YUM_REPO,,}" == "true" ]]; then
-            yum install -y -q nvidia-docker
-        else
-            # this rpm is officially released (without any dependencies) on GitHub.
-            yum install -y -q https://github.com/NVIDIA/nvidia-docker/releases/download/v1.0.1/nvidia-docker-1.0.1-1.x86_64.rpm
-        fi
-    fi
+    # NOTE: nvidia-container-runtime requires these three packages:
+    # nvidia-container-toolkit libnvidia-container-tools libnvidia-container1
+    rpm -qa | grep -q nvidia-container-runtime && return 0
 
-    # Note: nvidia-docker collect all the library files (in the /usr subdirectory) for nvidia GPUs
-    # and use *hard link* to map all these files into the directory /var/lib/nvidia-docker/volumes
-    # by default. Using *hard link* to map a file into another different partition is forbidden.
-    # So, if /var is mounted on a standalone device, creating docker volume will fail absolutely.
-    if lsblk | grep -q '/var$'; then
-        LOG warn "The '/var' has been mounted on a standalone device now!"
-        new_volumes_dir="/usr/lib/nvidia-docker/volumes"
+    if [[ "${ENABLE_LOCAL_YUM_REPO,,}" != "true" ]]; then
+        curl -s -L https://nvidia.github.io/nvidia-docker/centos7/nvidia-docker.repo \
+             -o /etc/yum.repos.d/nvidia-docker.repo
+        # in case this error: signature could not be verified for libnvidia-container
         sed -i -r \
-            -e "s|(.*nvidia-docker-plugin -s \S+).*|\1 -d ${new_volumes_dir}|" \
-            /usr/lib/systemd/system/nvidia-docker.service
-        mkdir -p "${new_volumes_dir}"
-        chown -R nvidia-docker:nvidia-docker "${new_volumes_dir}"
-    else
-        rm -rf /var/lib/nvidia-docker/volumes/*
-        # avoid 'permission denied' after reinstalling nvidia-docker.
-        chown -R nvidia-docker:nvidia-docker /var/lib/nvidia-docker/volumes
+            -e "s/^(repo_gpgcheck|gpgcheck|sslverify).*/\1=0/" \
+            /etc/yum.repos.d/nvidia-docker.repo
     fi
 
-    util::start_and_enable nvidia-docker.service
-
-    nvidia_docker_url="http://127.0.0.1:3476/docker/cli"
-    LOG debug "Sleeping at most 60 seconds to wait for nvidia-docker.service to be ready ..."
-    for ((idx=0; idx<6; idx++)); do
-        util::sleep_random 5 10
-        curl "${nvidia_docker_url}" &>/dev/null && break
-    done
-
-    if [[ "${idx}" -eq 6 ]]; then
-        LOG error "Failed to wait for nvidia-docker.service to be ready!"
-        return 1
-    fi
-
-    nvidia_gpu_volume=$(curl -s "${nvidia_docker_url}" 2>/dev/null |\
-                        grep -oP '(?<=--volume=)[^:]+(?=:)')
-    if [[ -z "${nvidia_gpu_volume}" ]]; then
-        LOG error "Failed to get the name of nvidia_gpu_volume from nvidia-docker!"
-        return 2
-    fi
-
-    LOG info "Creating the docker volume <${nvidia_gpu_volume}> on ${current_ip} ..."
-    docker volume inspect "${nvidia_gpu_volume}" &>/dev/null && return 0
-    docker volume create --name="${nvidia_gpu_volume}" --driver nvidia-docker
-}
-
-
-function install_nvidia_docker2() {
-    current_ip="$(util::current_host_ip)"
-
-    if ! rpm -qa | grep -q nvidia-docker2; then
-        LOG debug "Installing nvidia-docker2 on ${current_ip} ..."
-        if [[ "${ENABLE_LOCAL_YUM_REPO,,}" != "true" ]]; then
-            # ref: https://github.com/NVIDIA/nvidia-docker#centos-7-docker-ce-rhel-7475-docker-ce-amazon-linux-12
-            curl -s -L https://nvidia.github.io/nvidia-docker/centos7/nvidia-docker.repo \
-                 -o /etc/yum.repos.d/nvidia-docker.repo
-        fi
-        yum install -y -q nvidia-docker2
-    fi
+    LOG debug "Installing nvidia-container-runtime on ${current_ip} ..."
+    yum install -y -q nvidia-container-runtime
 
     # ref: https://github.com/NVIDIA/k8s-device-plugin
 	cat > /etc/docker/daemon.json <<-EOF
