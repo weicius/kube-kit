@@ -6,7 +6,7 @@
 function usage::kube_kit_help_msg() {
 	cat <<-EOF
 
-	Usage: ${0} <Subcommand> <Subcommand-Option> [Options]
+	Usage: \`kube-kit <Subcommand> <Subcommand-Option> [Options]\`
 
 	Options (can be anywhere):
 	    -n|--no-records      Do not record the successful message of current subcommand

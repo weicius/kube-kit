@@ -42,8 +42,8 @@ function ssh::execute() {
         # if this function is executed on a remote host, we'll get the function
         # definations using `util::get_global_envs`.
         for script in $(find "${__KUBE_KIT_DIR__}/library" -name '*.sh'); do
-            # NOTE: these scripts don't need to passed to remote hosts.
-            [[ "${script}" =~ (main|command|partition) ]] && continue
+            # NOTE: shouldn't pass 'main.sh' to remote hosts.
+            [[ "${script}" =~ main ]] && continue
             scripts+=("${script}")
         done
     fi

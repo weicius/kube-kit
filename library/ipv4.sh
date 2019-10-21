@@ -142,6 +142,7 @@ function ipv4::ip_range_to_ip_array() {
 function ipv4::ip_string_to_ip_array() {
     local -a items=(${1//,/ })
     local -a ip_array
+    local -a sort_options
 
     for item in "${items[@]}"; do
         if [[ "${item}" =~ ^${IPV4_REGEX}$ ]]; then
@@ -155,10 +156,9 @@ function ipv4::ip_string_to_ip_array() {
         fi
     done
 
+    sort_options=("-t" "." "-k" "1,1n" "-k" "2,2n" "-k" "3,3n" "-k" "4,4n")
     # remove the duplicate ips of the array 'ip_array' and sort all ips.
-    ip_array=($(tr " " "\n" <<< "${ip_array[@]}" |\
-                sort -u -t '.' -k 1,1n -k 2,2n -k 3,3n -k 4,4n | tr "\n" " "))
-    echo -n "${ip_array[@]}"
+    tr " " "\n" <<< "${ip_array[@]}" | sort -u "${sort_options[@]}"
 }
 
 

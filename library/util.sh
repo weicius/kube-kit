@@ -146,12 +146,11 @@ function util::last_idx_in_array() {
 
 
 function util::sort_uniq_array() {
-    local -a old_array=(${@})
-    local -a new_array
+    local -a array=(${@})
     local -a sort_options
     local ele_all_ips=true
 
-    for ele in "${old_array[@]}"; do
+    for ele in "${array[@]}"; do
         [[ "${ele}" =~ ^${IPV4_REGEX}$ ]] || ele_all_ips=false
     done
 
@@ -162,8 +161,7 @@ function util::sort_uniq_array() {
         sort_options=("-t" "." "-k" "1,1n" "-k" "2,2n" "-k" "3,3n" "-k" "4,4n")
     fi
 
-    new_array=($(tr " " "\n" <<< "${old_array[@]}" | sort -u "${sort_options[@]}"))
-    echo -n "${new_array[@]}"
+    tr " " "\n" <<< "${array[@]}" | sort -u "${sort_options[@]}"
 }
 
 
