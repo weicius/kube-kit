@@ -2,7 +2,7 @@
 # vim: nu:noai:ts=4
 # shellcheck shell=bash disable=SC1090,SC2034,SC2153,SC2206,SC2207
 
-source "${__KUBE_KIT_DIR__}/library/partition.sh"
+source "${__KUBE_KIT_DIR__}/util/partition.sh"
 
 if [[ "${ENABLE_MASTER_STANDALONE_DEVICE,,}" == "true" ]]; then
     # if some hosts act as both master and node in kubernetes cluster
