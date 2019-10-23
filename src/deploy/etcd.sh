@@ -80,5 +80,6 @@ function start_etcd() {
 
     chown -R etcd:etcd "${ETCD_CONFIG_DIR}" "${ETCD_WORKDIR}"
     LOG debug "Starting etcd.service on $(util::current_host_ip) ..."
+    systemctl stop etcd.service &>/dev/null || true
     util::start_and_enable etcd.service
 }
