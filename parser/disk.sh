@@ -60,7 +60,7 @@ if [[ "${ENABLE_GLUSTERFS,,}" == "true" ]]; then
     HEKETI_CLI="${__KUBE_KIT_DIR__}/binaries/heketi/heketi-cli -s ${HEKETI_SERVER}"
 
     if [[ -n "${GLUSTERFS_NETWORK_GATEWAY}" ]]; then
-        if [[ ! ("${GLUSTERFS_NETWORK_GATEWAY}" =~ ^${IPV4_REGEX}$) ]]; then
+        if ! [[ "${GLUSTERFS_NETWORK_GATEWAY}" =~ ^${IPV4_REGEX}$ ]]; then
             LOG error "GLUSTERFS_NETWORK_GATEWAY is configurated, but" \
                       "${GLUSTERFS_NETWORK_GATEWAY} is NOT a valid ipv4 address! "
             exit 145

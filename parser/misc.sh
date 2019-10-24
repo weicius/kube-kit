@@ -6,6 +6,13 @@
 # ************* validate configurations of localrepo and local ntp *************
 ################################################################################
 
+# NOTE: KUBE_PKGS_ARRAY keeps all the necessary rpm packages that
+# will be installed on all machines.
+pkg_list="${__KUBE_KIT_DIR__}/etc/pkg.list"
+declare -a KUBE_PKGS_ARRAY
+# NOTE: can't add double quotes here!
+KUBE_PKGS_ARRAY=($(eval echo $(grep -vE '^(\s*#.*|$)' ${pkg_list})))
+
 if [[ "${ENABLE_LOCAL_YUM_REPO,,}" == "true" ]]; then
     if [[ -z "${LOCAL_YUM_REPO_HOST}" || ! $(util::element_in_array \
         "${LOCAL_YUM_REPO_HOST}" "${KUBE_ALL_IPS_ARRAY[@]}") ]]; then
@@ -13,13 +20,6 @@ if [[ "${ENABLE_LOCAL_YUM_REPO,,}" == "true" ]]; then
         sed -i -r "s|^(LOCAL_YUM_REPO_HOST=).*|\1\"${LOCAL_YUM_REPO_HOST}\"|" \
             "${__KUBE_KIT_DIR__}/etc/kube-kit.env"
     fi
-
-    # NOTE: LOCAL_YUM_RPMS_ARRAY keeps all the necessary rpm packages that
-    # will be installed on all machines.
-    rpm_list="${__KUBE_KIT_DIR__}/etc/rpm.list"
-    declare -a LOCAL_YUM_RPMS_ARRAY
-    # NOTE: can't add double quotes here!
-    LOCAL_YUM_RPMS_ARRAY=($(eval echo $(grep -vE '^(\s*#.*|$)' ${rpm_list})))
 fi
 
 if [[ "${ENABLE_LOCAL_NTP_SERVER,,}" == "true" ]]; then

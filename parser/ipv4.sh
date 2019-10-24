@@ -66,16 +66,6 @@ fi
 array_defination=$(util::parse_ini "${__KUBE_KIT_DIR__}/etc/cipher.ini")
 eval "declare -A KUBE_CIPHERS_ARRAY=${array_defination}"
 
-# for k8s_ip in "${KUBE_ALL_IPS_ARRAY[@]}"; do
-#     if ! util::can_ping "${k8s_ip}"; then
-#         LOG error "The host '${k8s_ip}' is NOT active now!"
-#         exit 103
-#     elif ! util::can_ssh "${k8s_ip}"; then
-#         LOG error "The root password of '${k8s_ip}' is NOT correct!"
-#         exit 104
-#     fi
-# done
-
 ################################################################################
 # *********** fetch the network, cidr, ipv4 address of kube-kit host ***********
 ################################################################################
@@ -120,11 +110,11 @@ done
 # ****** validate KUBE_PODS_SUBNET, KUBE_SERVICES_SUBNET and relevant ips ******
 ################################################################################
 
-if [[ ! ("${KUBE_PODS_SUBNET}" =~ ^${PRIVATE_IPV4_CIDR_REGEX}$) ]]; then
+if ! [[ "${KUBE_PODS_SUBNET}" =~ ^${PRIVATE_IPV4_CIDR_REGEX}$ ]]; then
     LOG error "KUBE_PODS_SUBNET '${KUBE_PODS_SUBNET}'" \
               "is NOT a valid private ipv4 cidr address!"
     exit 107
-elif [[ ! ("${KUBE_SERVICES_SUBNET}" =~ ^${PRIVATE_IPV4_CIDR_REGEX}$) ]]; then
+elif ! [[ "${KUBE_SERVICES_SUBNET}" =~ ^${PRIVATE_IPV4_CIDR_REGEX}$ ]]; then
     LOG error "KUBE_SERVICES_SUBNET '${KUBE_SERVICES_SUBNET}'" \
               "is NOT a valid private ipv4 cidr address!"
     exit 108
@@ -140,7 +130,7 @@ elif ipv4::cidrs_intersect "${KUBE_SERVICES_SUBNET}" "${KUBE_KIT_SUBNET}"; then
     LOG error "KUBE_SERVICES_SUBNET '${KUBE_SERVICES_SUBNET}' and" \
               "the subnet of Kubernetes cluster '${KUBE_KIT_SUBNET}' intersect!"
     exit 111
-elif [[ ! ("${KUBE_KUBERNETES_SVC_IP}" =~ ^${PRIVATE_IPV4_REGEX}$) ]]; then
+elif ! [[ "${KUBE_KUBERNETES_SVC_IP}" =~ ^${PRIVATE_IPV4_REGEX}$ ]]; then
     LOG error "KUBE_KUBERNETES_SVC_IP '${KUBE_KUBERNETES_SVC_IP}'" \
               "is NOT a valid private ipv4 address!"
     exit 112
@@ -148,7 +138,7 @@ elif ! ipv4::cidr_contains_ip "${KUBE_SERVICES_SUBNET}" "${KUBE_KUBERNETES_SVC_I
     LOG error "KUBE_KUBERNETES_SVC_IP '${KUBE_KUBERNETES_SVC_IP}'" \
               "is NOT in KUBE_SERVICES_SUBNET '${KUBE_SERVICES_SUBNET}'!"
     exit 113
-elif [[ ! ("${KUBE_DNS_SVC_IP}" =~ ^${PRIVATE_IPV4_REGEX}$) ]]; then
+elif ! [[ "${KUBE_DNS_SVC_IP}" =~ ^${PRIVATE_IPV4_REGEX}$ ]]; then
     LOG error "KUBE_DNS_SVC_IP '${KUBE_DNS_SVC_IP}'" \
               "is NOT a valid private ipv4 address!"
     exit 114

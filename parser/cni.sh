@@ -13,7 +13,7 @@ if [[ "${ENABLE_CNI_PLUGIN,,}" == "true" ]]; then
     fi
 
     if [[ -n "${CALICO_NETWORK_GATEWAY}" ]]; then
-        if [[ ! ("${CALICO_NETWORK_GATEWAY}" =~ ^${IPV4_REGEX}$) ]]; then
+        if ! [[ "${CALICO_NETWORK_GATEWAY}" =~ ^${IPV4_REGEX}$ ]]; then
             LOG error "CALICO_NETWORK_GATEWAY is configurated, but ${CALICO_NETWORK_GATEWAY}" \
                       "is NOT a valid ipv4 address!"
             exit 132
@@ -38,7 +38,7 @@ if [[ "${ENABLE_CNI_PLUGIN,,}" == "true" ]]; then
     fi
 else
     if [[ -n "${FLANNEL_NETWORK_GATEWAY}" ]]; then
-        if [[ ! ("${FLANNEL_NETWORK_GATEWAY}" =~ ^${IPV4_REGEX}$) ]]; then
+        if ! [[ "${FLANNEL_NETWORK_GATEWAY}" =~ ^${IPV4_REGEX}$ ]]; then
             LOG error "FLANNEL_NETWORK_GATEWAY is configurated, but ${FLANNEL_NETWORK_GATEWAY}" \
                       "is NOT a valid ipv4 cidr address! "
             exit 135

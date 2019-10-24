@@ -4,6 +4,9 @@
 set -o errexit
 set +o pipefail
 
+# record the start timestamp.
+start_ns="$(date +%s%N)"
+
 __KUBE_KIT_DIR__=$(cd "$(dirname ${BASH_SOURCE[0]})" && pwd)
 source "${__KUBE_KIT_DIR__}/library/main.sh"
 source "${__KUBE_KIT_DIR__}/etc/main.env"
@@ -88,8 +91,6 @@ source "${__KUBE_KIT_DIR__}/etc/main.env"
 ################################################################################
 # ************ execute actual action of the sub command of kube-kit ************
 ################################################################################
-
-start_ns="$(date +%s%N)"
 
 [[ -d "${KUBE_KIT_LOGS_DIR}" ]] || mkdir -p "${KUBE_KIT_LOGS_DIR}"
 current_logfile="${KUBE_KIT_LOGS_DIR}/${SUBCMD}.log"
