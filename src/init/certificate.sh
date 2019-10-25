@@ -22,7 +22,7 @@ function generate_certs_for_kubelet() {
 	    ],
 	    "key": {
 	        "algo": "rsa",
-	        "size": 4096
+	        "size": ${KUBE_PKI_KEY_BITS}
 	    },
 	    "names": [
 	        {

@@ -88,7 +88,7 @@ function init_kube_env() {
     exclude_pkgs_regex="($(sed 's/ /|/g' <<< "${exclude_pkgs[*]}"))"
 
     LOG debug "Installing some useful packages on ${current_ip} ..."
-    for pkg in "${LOCAL_YUM_RPMS_ARRAY[@]}"; do
+    for pkg in "${KUBE_PKGS_ARRAY[@]}"; do
         [[ "${pkg}" =~ ^${exclude_pkgs_regex} ]] && continue
         rpm -qa | grep -qE "^${pkg}-" || yum install -y -q "${pkg}"
     done

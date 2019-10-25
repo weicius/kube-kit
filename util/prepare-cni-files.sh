@@ -13,17 +13,33 @@ function prepare::cni_binary_files() {
     local node_ips=("${@}")
 
     # prepare cni binary files to start up kubelet.
+    if [[ ! -e "${cni_tgz_file}" ]]; then
+        LOG debug "Downloading ${cni_tgz_file##*/} from ${CNI_DOWNLOAD_URL} ..."
+        mkdir -p "${cni_tgz_file%/*}"
+        curl -L "${CNI_DOWNLOAD_URL}/${CNI_VERSION}/${cni_tgz_file##*/}" \
+             -o "${cni_tgz_file}"
+    fi
+
     mkdir -p "${cni_binary_dir}"
     tar -xzf "${cni_tgz_file}" -C "${cni_binary_dir}"
+
     for calico_file in calico calico-ipam; do
-        if [[ ! -x "${calico_cni_plugin_dir}/${calico_file}" ]]; then
-            chmod +x "${calico_cni_plugin_dir}/${calico_file}"
+        if [[ ! -e "${calico_cni_plugin_dir}/${calico_file}" ]]; then
+            LOG debug "Downloading ${calico_file}-${CALICO_CNI_VERSION} from ${CALICOCNI_DOWNLOAD_URL} ..."
+            mkdir -p "${calico_cni_plugin_dir}"
+            curl -L "${CALICOCNI_DOWNLOAD_URL}/${CALICO_CNI_VERSION}/${calico_file}-amd64" \
+                 -o "${calico_cni_plugin_dir}/${calico_file}"
         fi
+        chmod +x "${calico_cni_plugin_dir}/${calico_file}"
     done
 
-    if [[ ! -x "${calicoctl_dir}/calicoctl" ]]; then
-        chmod +x "${calicoctl_dir}/calicoctl"
+    if [[ ! -e "${calicoctl_dir}/calicoctl" ]]; then
+        LOG debug "Downloading calicoctl-${CALICOCTL_VERSION} from ${CALICOCTL_DOWNLOAD_URL} ..."
+        mkdir -p "${calicoctl_dir}"
+        curl -L "${CALICOCTL_DOWNLOAD_URL}/${CALICOCTL_VERSION}/calicoctl-linux-amd64" \
+             -o "${calicoctl_dir}/calicoctl"
     fi
+    chmod +x "${calicoctl_dir}/calicoctl"
 
     ssh::execute_parallel -h "${node_ips[@]}" -- "
         rm -rf ${CNI_CONF_DIR} ${CNI_BIN_DIR}

@@ -8,8 +8,10 @@ flanneld_dir="${__KUBE_KIT_DIR__}/binaries/flannel"
 flanneld_tgz="${flanneld_dir}/flannel-${FLANNEL_VERSION}-linux-amd64.tar.gz"
 
 if [[ ! -f "${flanneld_tgz}" ]]; then
-    LOG error "The local flanneld file ${flanneld_tgz} doesn't exist!"
-    exit 1
+    LOG debug "Downloading ${flanneld_tgz##*/} from ${FLANNEL_DOWNLOAD_URL} ..."
+    mkdir -p "${flanneld_dir}"
+    curl -L "${FLANNEL_DOWNLOAD_URL}/${FLANNEL_VERSION}/${flanneld_tgz##*/}" \
+         -o "${flanneld_tgz}"
 fi
 
 if [[ ! -f "${flanneld_dir}/flanneld" || \

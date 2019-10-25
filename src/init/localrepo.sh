@@ -92,7 +92,7 @@ function yum::simulate_install() {
     current_ip="$(util::current_host_ip)"
 
     LOG debug "Simulating to install all the required packages on ${current_ip} ..."
-    for pkg in "${LOCAL_YUM_RPMS_ARRAY[@]}"; do
+    for pkg in "${KUBE_PKGS_ARRAY[@]}"; do
         rpm -qa | grep -q "^${pkg}-" && continue
         # check if something error occurs when simulating to install this package.
         yum install --assumeno "${pkg}" 2>&1 | \

@@ -7,26 +7,22 @@ cfssl_dir="${__KUBE_KIT_DIR__}/binaries/cfssl/${CFSSL_VERSION}"
 
 LOG title "Generating certification files using cfssl tools ..."
 
-for exe in cfssl cfssljson cfssl-certinfo; do
-    origin_exe="${exe}_linux-amd64"
-    if [[ -f "/usr/local/bin/${exe}" ]]; then
-        continue
-    elif [[ -f "${cfssl_dir}/${origin_exe}" ]]; then
-        LOG info "Copying ${exe} binary file to /usr/local/bin/${exe} ..."
-        cp -f "${cfssl_dir}/${origin_exe}" "/usr/local/bin/${exe}"
-    else
-        LOG info "Downloading ${exe} binary files from https://pkg.cfssl.org ..."
-        curl -L "https://pkg.cfssl.org/R${CFSSL_VERSION}/${origin_exe}" \
-             -o "/usr/local/bin/${exe}"
+for binfile in cfssl cfssljson cfssl-certinfo; do
+    if [[ ! -e "${cfssl_dir}/${binfile}" ]]; then
+        LOG info "Downloading ${binfile} binary files from ${CFSSL_DOWNLOAD_URL} ..."
+        mkdir -p "${cfssl_dir}"
+        curl -L "${CFSSL_DOWNLOAD_URL}/${CFSSL_VERSION}/${binfile}" \
+             -o "${cfssl_dir}/${binfile}"
     fi
-    chmod +x "/usr/local/bin/${exe}"
+    chmod +x "${cfssl_dir}/${binfile}"
+    cp -f "${cfssl_dir}/${binfile}" "/usr/local/bin/${binfile}"
 done
 
 scp::execute_parallel -h "all" \
-                      -s "/usr/local/bin/cfssl" \
-                      -s "/usr/local/bin/cfssljson" \
-                      -s "/usr/local/bin/cfssl-certinfo" \
-                      -d "/usr/local/bin/"
+                      -s "${cfssl_dir}/cfssl" \
+                      -s "${cfssl_dir}/cfssljson" \
+                      -s "${cfssl_dir}/cfssl-certinfo" \
+                      -d "/usr/local/bin"
 
 [[ -d "${KUBE_CONFIG_DIR}" ]] && rm -rf "${KUBE_CONFIG_DIR}"
 mkdir -p "${KUBE_PKI_DIR}"
@@ -63,7 +59,7 @@ function generate_ca_certificates() {
 	    "CN": "kubernetes",
 	    "key": {
 	        "algo": "rsa",
-	        "size": 4096
+	        "size": ${KUBE_PKI_KEY_BITS}
 	    },
 	    "names": [
 	        {
@@ -115,7 +111,7 @@ function generate_ssl_certificates() {
 	    "CN": "${common_name}",
 	    "key": {
 	        "algo": "rsa",
-	        "size": 4096
+	        "size": ${KUBE_PKI_KEY_BITS}
 	    },
 	    "hosts": [
 	        "${KUBE_KUBERNETES_SVC_IP}",
@@ -143,12 +139,12 @@ function generate_ssl_certificates() {
     done
 
     # add all the hostnames of kube-node.
-    for idx in $(seq ${KUBE_NODE_IPS_ARRAY_LEN} |tac); do
+    for idx in $(seq ${KUBE_NODE_IPS_ARRAY_LEN} | tac); do
         sed -i "/127.0.0.1/a\        \"${KUBE_NODE_HOSTNAME_PREFIX}${idx}\"," "${csr_file}"
     done
 
     # add all the hostnames of kube-master.
-    for idx in $(seq ${KUBE_MASTER_IPS_ARRAY_LEN} |tac); do
+    for idx in $(seq ${KUBE_MASTER_IPS_ARRAY_LEN} | tac); do
         sed -i "/127.0.0.1/a\        \"${KUBE_MASTER_HOSTNAME_PREFIX}${idx}\"," "${csr_file}"
     done
 

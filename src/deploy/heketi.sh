@@ -43,6 +43,7 @@ function modify_sshd_port() {
 
 function config_heketi_cli() {
     # to store /etc/heketi/fstab
+    chmod +x /usr/local/bin/heketi-cli
     [[ -d /etc/heketi ]] || mkdir -p /etc/heketi
     sed -i '/HEKETI_CLI_SERVER/d' /root/.bashrc
     echo "export HEKETI_CLI_SERVER=${HEKETI_SERVER}" >> /root/.bashrc

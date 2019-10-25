@@ -38,6 +38,7 @@ function prepare::local_kube_binary_files() {
     fi
 
     if [[ ! -f "${local_kubernetes_server_binary_file}" ]]; then
+        mkdir -p "${local_kubernetes_server_binary_file%/*}"
         LOG info "Downloading kubernetes-${KUBE_VERSION} binary files from ${KUBE_DOWNLOAD_URL} ..."
         curl -L "${KUBE_DOWNLOAD_URL}/${KUBE_VERSION}/${kubernetes_server_binary_filename}" \
              -o "${local_kubernetes_server_binary_file}"

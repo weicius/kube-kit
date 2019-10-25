@@ -15,7 +15,7 @@ function get_flanneld_iface() {
                 iface="${phynic}"
                 break
             fi
-        elif ip addr show "${phynic}" | grep -q "$(util::current_host_ip)}"; then
+        elif ip addr show "${phynic}" | grep -q "$(util::current_host_ip)"; then
             iface="${phynic}"
             break
         fi
