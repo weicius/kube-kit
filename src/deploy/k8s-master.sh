@@ -40,6 +40,7 @@ function config_k8s_master() {
 	            --etcd-servers=${ETCD_SERVERS} EOL
 	            --event-ttl=${KUBE_EVENT_TTL} EOL
 	            --encryption-provider-config=${KUBE_CONFIG_DIR}/encryption-config.yaml EOL
+	            --feature-gates=CustomResourceDefaulting=true EOL
 	            --insecure-port=0 EOL
 	            --kubelet-certificate-authority=${KUBE_PKI_DIR}/ca.pem EOL
 	            --kubelet-client-certificate=${KUBE_PKI_DIR}/kube-apiserver.pem EOL
@@ -90,6 +91,7 @@ function config_k8s_master() {
 	            --concurrent-gc-syncs=30 EOL
 	            --concurrent-service-syncs=10 EOL
 	            --experimental-cluster-signing-duration=${KUBE_PKI_EXPIRY} EOL
+	            --feature-gates=CustomResourceDefaulting=true EOL
 	            --horizontal-pod-autoscaler-sync-period=10s EOL
 	            --kubeconfig=${KUBE_CONFIG_DIR}/kube-controller-manager.kubeconfig EOL
 	            --kube-api-qps=1000 EOL
@@ -141,6 +143,7 @@ function config_k8s_master() {
 	            --authorization-kubeconfig=${KUBE_CONFIG_DIR}/kube-scheduler.kubeconfig EOL
 	            --bind-address=${master_ip} EOL
 	            --client-ca-file=${KUBE_PKI_DIR}/ca.pem EOL
+	            --feature-gates=CustomResourceDefaulting=true EOL
 	            --kubeconfig=${KUBE_CONFIG_DIR}/kube-scheduler.kubeconfig EOL
 	            --leader-elect=true EOL
 	            --leader-elect-lease-duration=15s EOL

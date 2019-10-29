@@ -3,8 +3,45 @@
 # shellcheck shell=bash disable=SC1090,SC2034,SC2206,SC2207,SC2216
 
 
+function get_system_reserved_memory() {
+    node_ip="$(util::current_host_ip)"
+    local system_reserved_memory_array=(
+        "${DOCKERD_MEMORY_LIMIT}"
+        "${KUBELET_MEMORY_LIMIT}"
+        "${KUBE_PROXY_MEMORY_LIMIT}"
+    )
+
+    if util::element_in_array "${node_ip}" "${KUBE_MASTER_IPS_ARRAY[@]}"; then
+        system_reserved_memory_array+=(
+            "${KUBE_APISERVER_MEMORY_LIMIT}"
+            "${KUBE_SCHEDULER_MEMORY_LIMIT}"
+            "${KUBE_CONTROLLER_MANAGER_MEMORY_LIMIT}"
+            "${ETCD_MEMORY_LIMIT}"
+        )
+    fi
+
+    if [[ "${ENABLE_CNI_PLUGIN,,}" != "true" ]]; then
+        system_reserved_memory_array+=("${FLANNELD_MEMORY_LIMIT}")
+    fi
+
+    local system_reserved_memory_in_mb=0
+    for reserved_memory in "${system_reserved_memory_array[@]}"; do
+        if [[ "${reserved_memory^^}" =~ ^([0-9]+)G$ ]]; then
+            local memory_in_gb="${BASH_REMATCH[1]}"
+            ((system_reserved_memory_in_mb += memory_in_gb * 1024))
+        elif [[ "${reserved_memory^^}" =~ ^([0-9]+)M$ ]]; then
+            local memory_in_mb="${BASH_REMATCH[1]}"
+            ((system_reserved_memory_in_mb += memory_in_mb))
+        fi
+    done
+
+    echo "${system_reserved_memory_in_mb}Mi"
+}
+
+
 function config_k8s_node() {
     node_ip="$(util::current_host_ip)"
+    system_reserved_memory="$(get_system_reserved_memory)"
 
     for svc in {kubelet,kube-proxy}.service; do
         # check if kubelet.service is configurated already
@@ -36,6 +73,7 @@ function config_k8s_node() {
 	            --docker-tls-cert=${KUBE_PKI_DIR}/docker.pem EOL
 	            --docker-tls-key=${KUBE_PKI_DIR}/docker-key.pem EOL
 	            --fail-swap-on=true EOL
+	            --feature-gates=CustomResourceDefaulting=true EOL
 	            --healthz-port=${KUBELET_HEALTHZ_PORT} EOL
 	            --hostname-override= EOL
 	            --image-pull-progress-deadline=30m EOL
@@ -51,6 +89,7 @@ function config_k8s_node() {
 	            --root-dir=${KUBELET_WORKDIR} EOL
 	            --runtime-request-timeout=10m EOL
 	            --serialize-image-pulls=false EOL
+	            --system-reserved=memory=${system_reserved_memory} EOL
 	            --tls-cert-file=${KUBE_PKI_DIR}/kubelet-$(hostname).pem EOL
 	            --tls-private-key-file=${KUBE_PKI_DIR}/kubelet-$(hostname)-key.pem EOL
 	            --v=${KUBE_LOGS_LEVEL}
@@ -85,6 +124,7 @@ function config_k8s_node() {
 	            --alsologtostderr=true EOL
 	            --bind-address=${node_ip} EOL
 	            --cluster-cidr=${KUBE_PODS_SUBNET} EOL
+	            --feature-gates=CustomResourceDefaulting=true EOL
 	            --hostname-override= EOL
 	            --kubeconfig=${KUBE_CONFIG_DIR}/kube-proxy.kubeconfig EOL
 	            --log-dir=${KUBE_LOGS_DIR} EOL
