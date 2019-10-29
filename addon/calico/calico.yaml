@@ -1,4 +1,4 @@
-# Calico Version v3.6.0
+# Calico Version v3.9.1
 # Modified according to the official yaml file:
 # https://docs.projectcalico.org/v3.9/getting-started/kubernetes/installation/hosted/calico.yaml
 # This manifest includes the following component versions:
@@ -289,7 +289,7 @@ spec:
               value: "can-reach=__DESTINATION__"
             # Enable IPIP
             - name: CALICO_IPV4POOL_IPIP
-              value: "off"
+              value: "__CALICO_IPIP_MODE__"
             # The default IPv4 pool to create on startup if none exists. Pod IPs will be
             # chosen from this range. Changing this value after installation will have
             # no effect. This should fall within `--cluster-cidr`.

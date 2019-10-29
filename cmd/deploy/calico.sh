@@ -8,12 +8,16 @@ calico_manifest_dir="${calico_dir}/manifest"
 [[ -d "${calico_manifest_dir}" ]] || mkdir -p "${calico_manifest_dir}"
 cp -f "${calico_dir}/calico.yaml" "${calico_manifest_dir}/calico.yaml"
 
+ipip_mode="off"
+[[ "${CALICO_MODE,,}" == "ipip" ]] && ipip_mode="always"
+
 sed -i -r \
     -e "s|__CALICO_NODE_IMAGE__|${CALICO_NODE_IMAGE}|" \
     -e "s|__CALICO_CNI_IMAGE__|${CALICO_CNI_IMAGE}|" \
     -e "s|__CALICO_KUBE_CONTROLLERS_IMAGE__|${CALICO_KUBE_CONTROLLERS_IMAGE}|" \
     -e "s|__CALICO_POD2DAEMON_FLEXVOL_IMAGE__|${CALICO_POD2DAEMON_FLEXVOL_IMAGE}|" \
     -e "s|__CALICO_IPV4POOL_CIDR__|${KUBE_PODS_SUBNET}|" \
+    -e "s|__CALICO_IPIP_MODE__|${ipip_mode}|" \
     -e "s|__CNI_BIN_DIR__|${CNI_BIN_DIR}|" \
     -e "s|__CNI_CONF_DIR__|${CNI_CONF_DIR}|" \
     -e "s|__DESTINATION__|${CALICO_NETWORK_GATEWAY:-${KUBE_KIT_GATEWAY}}|" \
