@@ -8,13 +8,22 @@
 
 disk_device_regex="/dev/[a-z]{3}([0-9]+)?"
 # KUBE_DISKS_ARRAY is the array to map each ipaddr to its disks for docker in etc/disk.ini
-array_defination=$(util::parse_ini "${__KUBE_KIT_DIR__}/etc/disk.ini")
+disk_ini="${__KUBE_KIT_DIR__}/etc/disk.ini"
+array_defination=$(util::parse_ini "${disk_ini}")
 eval "declare -A KUBE_DISKS_ARRAY=${array_defination}"
 
 for k8s_ip in "${KUBE_ALL_IPS_ARRAY[@]}"; do
+    if [[ "${ENABLE_MASTER_STANDALONE_DEVICE,,}" != "true" ]]; then
+        util::element_in_array "${k8s_ip}" "${KUBE_MASTER_IPS_ARRAY[@]}" && continue
+    fi
+
+    if [[ "${ENABLE_NODE_STANDALONE_DEVICE,,}" != "true" ]]; then
+        util::element_in_array "${k8s_ip}" "${KUBE_NODE_IPS_ARRAY[@]}" && continue
+    fi
+
     disks=(${KUBE_DISKS_ARRAY[${k8s_ip}]})
     if [[ "${#disks}" -eq 0 ]]; then
-        LOG error "The disk for the host '${k8s_ip}' is empty!"
+        LOG error "The disk for the host '${k8s_ip}' in ${disk_ini} is empty!"
         exit 141
     fi
 

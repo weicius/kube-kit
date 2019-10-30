@@ -12,11 +12,11 @@ function usage::kube_kit_help_msg() {
 	    -n|--no-records      Do not record the successful message of current subcommand
 
 	Subcommand:
-	    check                Check if requirements are satisfied
-	    init                 Initialize the basic environment
-	    deploy               Deploy the specified component
-	    clean                Clean the specified component
-	    update               Update the specified component
+	    check                Check if all the basic requirements are satisfied
+	    init                 Init the basic environments defore startup kubernetes cluster
+	    deploy               Deploy kubernetes components, dependency services and addons
+	    clean                Clean the kubernetes cluster and dependency services
+	    update               Add new kubernetes/heketi nodes, update kubernetes version
 
 	Options for 'check':
 	    env                  Check if basic environment requirements are satisfied

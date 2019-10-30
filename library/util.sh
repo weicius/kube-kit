@@ -5,7 +5,7 @@
 # note: this function returns an array's defination.
 # e.g. ret_str="$(util::parse_ini /path/to/ini/file)"
 # ret_str's content (including the single quotes) is
-# '([10.10.10.11]="r00tnode1" [10.10.10.22]="r00tnode2" [10.10.10.33]="r00tnode3" )'
+# '([192.168.10.11]="r00tnode1" [192.168.10.12]="r00tnode2" [192.168.10.13]="r00tnode3" )'
 # you can use "${ret_str}" to re-declare your new array via the "eval" command:
 # eval "declare -A new_array=${ret_str}"
 # now, you can use the new_array as normal :)

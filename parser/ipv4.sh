@@ -6,11 +6,16 @@
 # ******** validate KUBE_MASTER_VIP, KUBE_MASTER_IPS and KUBE_NODE_IPS *********
 ################################################################################
 
-if [[ -n "${KUBE_MASTER_VIP}" && \
-      ! ("${KUBE_MASTER_VIP}" =~ ^${IPV4_REGEX}$) ]]; then
-    LOG error "KUBE_MASTER_VIP is configurated, but '${KUBE_MASTER_VIP}'" \
-              "is NOT a valid ipv4 address!"
-    exit 101
+if [[ -n "${KUBE_MASTER_VIP}" ]]; then
+    if ! [[ "${KUBE_MASTER_VIP}" =~ ^${IPV4_REGEX}$ ]]; then
+        LOG error "KUBE_MASTER_VIP is configurated, but '${KUBE_MASTER_VIP}'" \
+                  "is NOT a valid ipv4 address!"
+        exit 101
+    elif util::can_ping "${KUBE_MASTER_VIP}" && \
+        ! grep -q "kube-kit deploy proxy" "${KUBE_KIT_INDICATE_FILE}"; then
+        LOG error "KUBE_MASTER_VIP must be an unused ipv4 address!"
+        exit 102
+    fi
 fi
 
 declare -a KUBE_MASTER_IPS_ARRAY
@@ -59,7 +64,7 @@ KUBE_PURE_NODE_IPS_ARRAY_LEN="${#KUBE_PURE_NODE_IPS_ARRAY[@]}"
 
 if [[ "$((KUBE_MASTER_IPS_ARRAY_LEN % 2))" -eq 0 ]]; then
     LOG error "KUBE_MASTER_IPS must contain odd ipv4 addresses! e.g. 1, 3, 5 ..."
-    exit 102
+    exit 103
 fi
 
 # KUBE_CIPHERS_ARRAY is the array to map each ipaddr to its root password in etc/cipher.ini
@@ -90,7 +95,7 @@ done
 
 if [[ -z "${KUBE_KIT_NET_IPADDR}" || -z "${KUBE_KIT_NET_PREFIX}" ]]; then
     LOG error "Current host has NO ipaddr which is in the same subnet with kubernetes cluster!"
-    exit 105
+    exit 104
 fi
 
 # e.g. 192.168.128.0, 192.168.128.0/20 and 192.168.128.1
@@ -102,7 +107,7 @@ for k8s_ip in "${KUBE_ALL_IPS_ARRAY[@]}" "${KUBE_MASTER_VIP}"; do
     if ! ipv4::two_ips_in_same_subnet "${k8s_ip}" \
         "${KUBE_KIT_NET_IPADDR}" "${KUBE_KIT_NET_PREFIX}"; then
         LOG error "The ip '${k8s_ip}' is NOT in the subnet ${KUBE_KIT_SUBNET}!"
-        exit 106
+        exit 105
     fi
 done
 
@@ -113,42 +118,42 @@ done
 if ! [[ "${KUBE_PODS_SUBNET}" =~ ^${PRIVATE_IPV4_CIDR_REGEX}$ ]]; then
     LOG error "KUBE_PODS_SUBNET '${KUBE_PODS_SUBNET}'" \
               "is NOT a valid private ipv4 cidr address!"
-    exit 107
+    exit 106
 elif ! [[ "${KUBE_SERVICES_SUBNET}" =~ ^${PRIVATE_IPV4_CIDR_REGEX}$ ]]; then
     LOG error "KUBE_SERVICES_SUBNET '${KUBE_SERVICES_SUBNET}'" \
               "is NOT a valid private ipv4 cidr address!"
-    exit 108
+    exit 107
 elif ipv4::cidrs_intersect "${KUBE_PODS_SUBNET}" "${KUBE_SERVICES_SUBNET}"; then
     LOG error "KUBE_PODS_SUBNET '${KUBE_PODS_SUBNET}' and" \
               "KUBE_SERVICES_SUBNET '${KUBE_SERVICES_SUBNET}' intersect!"
-    exit 109
+    exit 108
 elif ipv4::cidrs_intersect "${KUBE_PODS_SUBNET}" "${KUBE_KIT_SUBNET}"; then
     LOG error "KUBE_PODS_SUBNET '${KUBE_PODS_SUBNET}' and" \
               "the subnet of Kubernetes cluster '${KUBE_KIT_SUBNET}' intersect!"
-    exit 110
+    exit 109
 elif ipv4::cidrs_intersect "${KUBE_SERVICES_SUBNET}" "${KUBE_KIT_SUBNET}"; then
     LOG error "KUBE_SERVICES_SUBNET '${KUBE_SERVICES_SUBNET}' and" \
               "the subnet of Kubernetes cluster '${KUBE_KIT_SUBNET}' intersect!"
-    exit 111
+    exit 110
 elif ! [[ "${KUBE_KUBERNETES_SVC_IP}" =~ ^${PRIVATE_IPV4_REGEX}$ ]]; then
     LOG error "KUBE_KUBERNETES_SVC_IP '${KUBE_KUBERNETES_SVC_IP}'" \
               "is NOT a valid private ipv4 address!"
-    exit 112
+    exit 111
 elif ! ipv4::cidr_contains_ip "${KUBE_SERVICES_SUBNET}" "${KUBE_KUBERNETES_SVC_IP}"; then
     LOG error "KUBE_KUBERNETES_SVC_IP '${KUBE_KUBERNETES_SVC_IP}'" \
               "is NOT in KUBE_SERVICES_SUBNET '${KUBE_SERVICES_SUBNET}'!"
-    exit 113
+    exit 112
 elif ! [[ "${KUBE_DNS_SVC_IP}" =~ ^${PRIVATE_IPV4_REGEX}$ ]]; then
     LOG error "KUBE_DNS_SVC_IP '${KUBE_DNS_SVC_IP}'" \
               "is NOT a valid private ipv4 address!"
-    exit 114
+    exit 113
 elif ! ipv4::cidr_contains_ip "${KUBE_SERVICES_SUBNET}" "${KUBE_DNS_SVC_IP}"; then
     LOG error "KUBE_DNS_SVC_IP '${KUBE_DNS_SVC_IP}'" \
               "is NOT in KUBE_SERVICES_SUBNET '${KUBE_SERVICES_SUBNET}'!"
-    exit 115
+    exit 114
 elif [[ "${KUBE_DNS_SVC_IP}" == "${KUBE_KUBERNETES_SVC_IP}" ]]; then
     LOG error "KUBE_DNS_SVC_IP and KUBE_KUBERNETES_SVC_IP can NOT be the same!"
-    exit 116
+    exit 115
 fi
 
 ################################################################################
@@ -158,10 +163,10 @@ fi
 if [[ "${KUBE_MASTER_IPS_ARRAY_LEN}" -gt 1 ]]; then
     if [[ -z "${KUBE_MASTER_VIP}" || -z "${KUBE_VIP_SECURE_PORT}" ]]; then
         LOG error "In HA mode, KUBE_MASTER_VIP and KUBE_VIP_SECURE_PORT are required!"
-        exit 117
+        exit 116
     elif [[ "${KUBE_VIP_SECURE_PORT}" -eq "${KUBE_APISERVER_SECURE_PORT}" ]]; then
         LOG error "In HA mode, KUBE_VIP_SECURE_PORT and KUBE_APISERVER_SECURE_PORT can NOT be the same!"
-        exit 118
+        exit 117
     fi
 else
     # in non-HA mode, there is only ONE master, and we set it to KUBE_MASTER_VIP by force.
