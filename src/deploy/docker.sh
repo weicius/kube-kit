@@ -51,7 +51,7 @@ function config_docker() {
 	ExecStart=/usr/bin/dockerd \\
 	            --containerd=/run/containerd/containerd.sock \\
 	            --data-root=${DOCKER_WORKDIR} \\
-	            --debug=true \\
+	            --debug=false \\
 	            --host=tcp://${current_ip}:${DOCKER_DAEMON_PORT} \\
 	            --host=unix:///var/run/docker.sock \\
 	            --insecure-registry=${HARBOR_REGISTRY} \\

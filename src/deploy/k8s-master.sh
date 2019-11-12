@@ -26,7 +26,7 @@ function config_k8s_master() {
 	ExecStart=/usr/local/bin/kube-apiserver EOL
 	            --advertise-address=${master_ip} EOL
 	            --allow-privileged=${KUBE_ALLOW_PRIVILEGED} EOL
-	            --alsologtostderr=true EOL
+	            --alsologtostderr=false EOL
 	            --anonymous-auth=false EOL
 	            --apiserver-count=${KUBE_MASTER_IPS_ARRAY_LEN} EOL
 	            --authorization-mode=Node,RBAC EOL
@@ -78,7 +78,7 @@ function config_k8s_master() {
 	MemoryLimit=${KUBE_CONTROLLER_MANAGER_MEMORY_LIMIT}
 	ExecStart=/usr/local/bin/kube-controller-manager EOL
 	            --address=127.0.0.1 EOL
-	            --alsologtostderr=true EOL
+	            --alsologtostderr=false EOL
 	            --authentication-kubeconfig=${KUBE_CONFIG_DIR}/kube-controller-manager.kubeconfig EOL
 	            --authorization-kubeconfig=${KUBE_CONFIG_DIR}/kube-controller-manager.kubeconfig EOL
 	            --bind-address=${master_ip} EOL
@@ -138,7 +138,7 @@ function config_k8s_master() {
 	MemoryLimit=${KUBE_SCHEDULER_MEMORY_LIMIT}
 	ExecStart=/usr/local/bin/kube-scheduler EOL
 	            --address=127.0.0.1 EOL
-	            --alsologtostderr=true EOL
+	            --alsologtostderr=false EOL
 	            --authentication-kubeconfig=${KUBE_CONFIG_DIR}/kube-scheduler.kubeconfig EOL
 	            --authorization-kubeconfig=${KUBE_CONFIG_DIR}/kube-scheduler.kubeconfig EOL
 	            --bind-address=${master_ip} EOL

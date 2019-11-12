@@ -64,7 +64,7 @@ function config_k8s_node() {
 	MemoryLimit=${KUBELET_MEMORY_LIMIT}
 	ExecStart=/usr/local/bin/kubelet EOL
 	            --address=${node_ip} EOL
-	            --alsologtostderr=true EOL
+	            --alsologtostderr=false EOL
 	            --client-ca-file=${KUBE_PKI_DIR}/ca.pem EOL
 	            --cluster-dns=${KUBE_DNS_SVC_IP} EOL
 	            --cluster-domain=${KUBE_DNS_DOMAIN} EOL
@@ -121,7 +121,7 @@ function config_k8s_node() {
 	User=root
 	MemoryLimit=${KUBE_PROXY_MEMORY_LIMIT}
 	ExecStart=/usr/local/bin/kube-proxy EOL
-	            --alsologtostderr=true EOL
+	            --alsologtostderr=false EOL
 	            --bind-address=${node_ip} EOL
 	            --cluster-cidr=${KUBE_PODS_SUBNET} EOL
 	            --feature-gates=CustomResourceDefaulting=true EOL

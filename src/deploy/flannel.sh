@@ -88,5 +88,5 @@ function config_flanneld() {
 
 
 function stop_flanneld() {
-    systemctl is-active flanneld -q && systemctl stop flanneld || true
+    systemctl stop flanneld || true
 }
